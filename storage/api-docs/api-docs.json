@@ -106,6 +106,201 @@
                     }
                 ]
             }
+        },
+        "/api/warga/beranda": {
+            "get": {
+                "tags": [
+                    "PB-02 Beranda Warga"
+                ],
+                "summary": "Menampilkan data beranda warga",
+                "description": "Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung. Endpoint khusus role Warga.",
+                "operationId": "getBerandaWarga",
+                "parameters": [
+                    {
+                        "name": "tanggal",
+                        "in": "query",
+                        "description": "Tanggal agenda dengan format YYYY-MM-DD. Default menggunakan tanggal hari ini.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-08-15"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Data beranda warga berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Data beranda warga berhasil diambil"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "banner": {
+                                                    "properties": {
+                                                        "id_periode": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "judul": {
+                                                            "type": "string",
+                                                            "example": "Semarak HUT RI ke-81"
+                                                        },
+                                                        "tahun": {
+                                                            "type": "string",
+                                                            "example": "2026"
+                                                        },
+                                                        "deskripsi": {
+                                                            "type": "string",
+                                                            "example": "Nusantara Bersuka, Indonesia Berjaya"
+                                                        },
+                                                        "logo": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "tanggal_filter": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-08-15"
+                                                },
+                                                "jadwal_agenda": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id_jadwal": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "id_lomba": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "nama_lomba": {
+                                                                "type": "string",
+                                                                "example": "Tarik Tambang"
+                                                            },
+                                                            "nama_kategori": {
+                                                                "type": "string",
+                                                                "example": "Dewasa"
+                                                            },
+                                                            "tanggal": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-08-15"
+                                                            },
+                                                            "waktu_mulai": {
+                                                                "type": "string",
+                                                                "example": "09:00:00"
+                                                            },
+                                                            "waktu_selesai": {
+                                                                "type": "string",
+                                                                "example": "11:00:00"
+                                                            },
+                                                            "lokasi": {
+                                                                "type": "string",
+                                                                "example": "Lapangan Timur"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "pengumuman_terbaru": {
+                                                    "properties": {
+                                                        "id_pengumuman": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "judul": {
+                                                            "type": "string",
+                                                            "example": "Pengumuman Jadwal Lomba 17 Agustus"
+                                                        },
+                                                        "isi": {
+                                                            "type": "string",
+                                                            "example": "Seluruh warga diharapkan hadir dan mengikuti perlombaan 17 Agustus."
+                                                        },
+                                                        "tanggal_publikasi": {
+                                                            "type": "string",
+                                                            "example": "2026-08-14 08:00:00"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "sedang_berlangsung": {
+                                                    "description": "Daftar pertandingan yang berstatus Berlangsung",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id_pertandingan": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "id_lomba": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "nama_lomba": {
+                                                                "type": "string",
+                                                                "example": "Tarik Tambang"
+                                                            },
+                                                            "peserta_1": {
+                                                                "type": "string",
+                                                                "example": "RT 01"
+                                                            },
+                                                            "peserta_2": {
+                                                                "type": "string",
+                                                                "example": "RT 02"
+                                                            },
+                                                            "waktu_mulai": {
+                                                                "type": "string",
+                                                                "example": "2026-08-15 09:00:00"
+                                                            },
+                                                            "status": {
+                                                                "type": "string",
+                                                                "example": "Berlangsung"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Pengguna belum login"
+                    },
+                    "403": {
+                        "description": "Pengguna tidak memiliki role Warga"
+                    },
+                    "422": {
+                        "description": "Format tanggal tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -122,6 +317,10 @@
         {
             "name": "Authentication",
             "description": "Authentication"
+        },
+        {
+            "name": "PB-02 Beranda Warga",
+            "description": "PB-02 Beranda Warga"
         }
     ]
 }

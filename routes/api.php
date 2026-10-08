@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BerandaController;
 
 // ==============================
 // AUTHENTICATION
@@ -67,9 +68,10 @@ Route::middleware([
 });
 
 
-// ==============================
-// WARGA
-// ==============================
+
+ // ==============================
+ // WARGA
+ // ==============================
 
 Route::middleware([
     'auth:sanctum',
@@ -81,6 +83,12 @@ Route::middleware([
             'message' => 'Dashboard Warga'
         ]);
     });
+
+    // PB-02: Beranda Warga
+    Route::get('/beranda', [
+        BerandaController::class,
+        'index'
+    ]);
 
 });
 

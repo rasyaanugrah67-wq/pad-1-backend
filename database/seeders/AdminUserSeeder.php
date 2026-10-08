@@ -42,7 +42,7 @@ class AdminUserSeeder extends Seeder
                 'id_role' => 1,
 
                 'password' => Hash::make(
-                    env('ADMIN_PASSWORD', 'Admin123!')
+                    env('ADMIN_PASSWORD')
                 ),
 
                 'status' => 'Aktif',
