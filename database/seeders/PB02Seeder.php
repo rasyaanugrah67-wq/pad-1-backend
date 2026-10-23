@@ -11,14 +11,40 @@ class PB02Seeder extends Seeder
     {
         DB::transaction(function () {
 
+            // Menambahkan data baru atau memperbarui data lama.
+            // created_at hanya diisi saat data pertama kali dibuat.
+            $simpan = function (
+                string $tabel,
+                array $kunci,
+                array $nilai
+            ): void {
+                $query = DB::table($tabel)->where($kunci);
+
+                if ($query->exists()) {
+                    $query->update(array_merge(
+                        $nilai,
+                        ['updated_at' => now()]
+                    ));
+                } else {
+                    DB::table($tabel)->insert(array_merge(
+                        $kunci,
+                        $nilai,
+                        [
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    ));
+                }
+            };
+
             // 1. Data periode HUT RI
-            DB::table('periode')->updateOrInsert(
+            $simpan(
+                'periode',
                 ['tahun' => 2026],
                 [
                     'nama_kegiatan' => 'Semarak HUT RI ke-81',
                     'deskripsi' => 'Nusantara Bersuka, Indonesia Berjaya',
                     'status' => 'Aktif',
-                    'updated_at' => now(),
                 ]
             );
 
@@ -34,9 +60,10 @@ class PB02Seeder extends Seeder
             ];
 
             foreach ($kategori as $nama) {
-                DB::table('kategori_lomba')->updateOrInsert(
+                $simpan(
+                    'kategori_lomba',
                     ['nama_kategori' => $nama],
-                    ['updated_at' => now()]
+                    []
                 );
             }
 
@@ -90,7 +117,9 @@ class PB02Seeder extends Seeder
                     ->where('nama_kategori', $item['kategori'])
                     ->value('id_kategori');
 
-                DB::table('lomba')->updateOrInsert(
+                // Simpan data lomba
+                $simpan(
+                    'lomba',
                     [
                         'id_periode' => $idPeriode,
                         'nama_lomba' => $item['nama'],
@@ -99,7 +128,6 @@ class PB02Seeder extends Seeder
                         'id_kategori' => $idKategori,
                         'deskripsi' => 'Perlombaan dalam rangka HUT RI ke-81.',
                         'status' => 'Dibuka',
-                        'updated_at' => now(),
                     ]
                 );
 
@@ -108,7 +136,9 @@ class PB02Seeder extends Seeder
                     ->where('nama_lomba', $item['nama'])
                     ->value('id_lomba');
 
-                DB::table('jadwal_lomba')->updateOrInsert(
+                // Simpan jadwal lomba
+                $simpan(
+                    'jadwal_lomba',
                     [
                         'id_lomba' => $idLomba,
                         'tanggal' => $item['tanggal'],
@@ -117,10 +147,14 @@ class PB02Seeder extends Seeder
                         'waktu_mulai' => $item['mulai'],
                         'waktu_selesai' => $item['selesai'],
                         'lokasi' => $item['lokasi'],
-                        'updated_at' => now(),
                     ]
                 );
             }
+
         });
+
+        $this->command?->info(
+            'Data PB-02 berhasil disiapkan.'
+        );
     }
 }
