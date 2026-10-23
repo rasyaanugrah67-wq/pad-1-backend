@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BerandaController;
+use App\Http\Controllers\Api\LombaController;
 
 // ==============================
 // AUTHENTICATION
@@ -89,6 +90,20 @@ Route::middleware([
         BerandaController::class,
         'index'
     ]);
+
+    
+    // PB-03: Daftar Lomba Warga
+    Route::get('/lomba', [
+        LombaController::class,
+        'index'
+    ]);
+
+    // PB-03: Detail Lomba Warga
+    Route::get('/lomba/{id}', [
+        LombaController::class,
+        'show'
+    ])->whereNumber('id');
+
 
 });
 
