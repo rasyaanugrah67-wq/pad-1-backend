@@ -55,11 +55,15 @@ class LombaController extends Controller
         }
 
         // Filter status sesuai tampilan frontend
+        
         if ($status === 'Segera') {
-            $query->where('status', 'Dibuka');
-        } elseif ($status === 'Selesai') {
+            $query->where('status', 'Dibuka')
+        ->whereHas('jadwal', function ($q) {
+            $q->whereDate('tanggal', '>=', now()->toDateString());
+        });
+}       elseif ($status === 'Selesai') {
             $query->where('status', 'Selesai');
-        }
+}
 
         $lomba = $query
             ->orderBy('nama_lomba')
