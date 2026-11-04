@@ -13,7 +13,7 @@ class BerandaController extends Controller
      * @OA\Get(
      *     path="/api/warga/beranda",
      *     operationId="getBerandaWarga",
-     *     tags={"PB-02 Beranda Warga"},
+     *     tags={"Beranda Warga"},
      *     summary="Menampilkan data beranda warga",
      *     description="Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung. Endpoint khusus role Warga.",
      *     security={{"sanctum":{}}},

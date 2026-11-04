@@ -30,6 +30,15 @@ class Pembayaran extends Model
         'nominal' => 'decimal:2',
     ];
 
+    protected $appends = [
+        'bukti_bayar_url',
+    ];
+
+    public function getBuktiBayarUrlAttribute(): ?string
+    {
+        return $this->bukti_bayar ? asset('storage/' . $this->bukti_bayar) : null;
+    }
+
     public function iuran(): BelongsTo
     {
         return $this->belongsTo(Iuran::class, 'id_iuran', 'id_iuran');

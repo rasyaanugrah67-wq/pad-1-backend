@@ -1,0 +1,1911 @@
+﻿=== PAD AUDIT LANJUTAN ===
+
+
+========================================
+FILE: app/Http/Kernel.php
+========================================
+<?php
+
+namespace App\Http;
+
+use Illuminate\Foundation\Http\Kernel as HttpKernel;
+
+class Kernel extends HttpKernel
+{
+    /**
+     * The application's global HTTP middleware stack.
+     *
+     * These middleware are run during every request to your application.
+     *
+     * @var array<int, class-string|string>
+     */
+    protected $middleware = [
+        // \App\Http\Middleware\TrustHosts::class,
+        \App\Http\Middleware\TrustProxies::class,
+        \Illuminate\Http\Middleware\HandleCors::class,
+        \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
+        \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
+        \App\Http\Middleware\TrimStrings::class,
+        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        
+    ];
+
+    /**
+     * The application's route middleware groups.
+     *
+     * @var array<string, array<int, class-string|string>>
+     */
+    protected $middlewareGroups = [
+        'web' => [
+            \App\Http\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \App\Http\Middleware\VerifyCsrfToken::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        ],
+
+        'api' => [
+            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        ],
+    ];
+
+    /**
+     * The application's middleware aliases.
+     *
+     * Aliases may be used instead of class names to conveniently assign middleware to routes and groups.
+     *
+     * @var array<string, class-string|string>
+     */
+    protected $middlewareAliases = [
+        'auth' => \App\Http\Middleware\Authenticate::class,
+        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+        'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
+        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
+        'can' => \Illuminate\Auth\Middleware\Authorize::class,
+        'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
+        'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
+        'signed' => \App\Http\Middleware\ValidateSignature::class,
+        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        'role' => \App\Http\Middleware\CheckRole::class,
+    ];
+}
+
+
+
+========================================
+FILE: app/Http/Controllers/Api/AuthController.php
+========================================
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Models\Akun;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use OpenApi\Annotations as OA;
+
+class AuthController extends Controller
+{
+    /**
+ * @OA\Post(
+ *     path="/api/auth/login",
+ *     summary="Login pengguna",
+ *     description="Login menggunakan username dan password untuk mendapatkan token Sanctum.",
+ *     tags={"Authentication"},
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"username","password"},
+ *             @OA\Property(
+ *                 property="username",
+ *                 type="string",
+ *                 example="admin"
+ *             ),
+ *             @OA\Property(
+ *                 property="password",
+ *                 type="string",
+ *                 format="password",
+ *                 example="Admin123!"
+ *             )
+ *         )
+ *     ),
+ *
+ *     @OA\Response(
+ *         response=200,
+ *         description="Login berhasil"
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="Username atau password salah"
+ *     ),
+ *     @OA\Response(
+ *         response=403,
+ *         description="Akun tidak aktif"
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validasi gagal"
+ *     )
+ * )
+ */
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $akun = Akun::with([
+            'role',
+            'warga.rt.rw',
+        ])
+            ->where('username', $request->username)
+            ->first();
+
+        if (
+            !$akun ||
+            !Hash::check($request->password, $akun->password)
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Username atau password salah.',
+            ], 401);
+        }
+
+        if (!$akun->isActive()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun Anda sedang tidak aktif.',
+            ], 403);
+        }
+
+        if (
+            !$akun->warga ||
+            $akun->warga->status !== 'Aktif'
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data warga tidak aktif.',
+            ], 403);
+        }
+
+        $akun->update([
+            'last_login' => now(),
+        ]);
+
+        /*
+         * Opsional:
+         * hapus token sebelumnya supaya satu akun
+         * hanya memiliki satu session API.
+         */
+
+        // $akun->tokens()->delete();
+
+        $token = $akun->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login berhasil.',
+
+            'data' => [
+                'token' => $token,
+                'token_type' => 'Bearer',
+
+                'akun' => [
+                    'id_akun' => $akun->id_akun,
+                    'username' => $akun->username,
+
+                    'role' => [
+                        'id_role' => $akun->role->id_role,
+                        'nama_role' => $akun->role->nama_role,
+                    ],
+
+                    'warga' => [
+                        'id_warga' => $akun->warga->id_warga,
+                        'nama' => $akun->warga->nama,
+                    ],
+
+                    'last_login' => $akun->last_login,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+ * @OA\Post(
+ *     path="/api/auth/logout",
+ *     summary="Logout pengguna",
+ *     description="Menghapus token Sanctum yang sedang digunakan.",
+ *     tags={"Authentication"},
+ *     security={{"sanctum":{}}},
+ *
+ *     @OA\Response(
+ *         response=200,
+ *         description="Logout berhasil"
+ *     ),
+ *
+ *     @OA\Response(
+ *         response=401,
+ *         description="Unauthenticated"
+ *     )
+ * )
+ */
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()
+            ->currentAccessToken()
+            ?->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logout berhasil.',
+        ]);
+    }
+
+    /**
+ * @OA\Get(
+ *     path="/api/auth/me",
+ *     summary="Mengambil data pengguna yang sedang login",
+ *     description="Mengambil informasi akun berdasarkan token Sanctum.",
+ *     tags={"Authentication"},
+ *     security={{"sanctum":{}}},
+ *
+ *     @OA\Response(
+ *         response=200,
+ *         description="Data pengguna berhasil diambil"
+ *     ),
+ *
+ *     @OA\Response(
+ *         response=401,
+ *         description="Unauthenticated"
+ *     )
+ * )
+ */
+    public function me(Request $request): JsonResponse
+    {
+        $akun = $request->user()->load([
+            'role',
+            'warga.rt.rw',
+        ]);
+
+        return response()->json([
+            'success' => true,
+
+            'data' => [
+                'id_akun' => $akun->id_akun,
+                'username' => $akun->username,
+                'status' => $akun->status,
+
+                'role' => [
+                    'id_role' => $akun->role->id_role,
+                    'nama_role' => $akun->role->nama_role,
+                ],
+
+                'warga' => [
+                    'id_warga' => $akun->warga->id_warga,
+                    'nama' => $akun->warga->nama,
+                    'no_hp' => $akun->warga->no_hp,
+                ],
+            ],
+        ]);
+    }
+}
+
+
+========================================
+FILE: app/Http/Controllers/Api/LombaController.php
+========================================
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Lomba;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+
+class LombaController extends Controller
+{
+    // PB-03: Daftar lomba warga
+    public function index(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'status' => [
+                'nullable',
+                Rule::in(['Semua', 'Segera', 'Selesai']),
+            ],
+        ]);
+
+        $search = $validated['search'] ?? null;
+        $status = $validated['status'] ?? 'Semua';
+
+        // Mengikuti periode aktif seperti PB-02
+        $periode = DB::table('periode')
+            ->where('status', 'Aktif')
+            ->orderByDesc('tahun')
+            ->first();
+
+        if (!$periode) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Belum ada periode kegiatan aktif',
+                'data' => [],
+            ]);
+        }
+
+        $query = Lomba::with([
+                'kategori',
+                'jadwal' => function ($query) {
+                    $query->orderBy('tanggal')
+                        ->orderBy('waktu_mulai');
+                },
+            ])
+            ->where('id_periode', $periode->id_periode)
+            ->where('status', '!=', 'Nonaktif');
+
+        // Pencarian berdasarkan nama lomba
+        if ($search !== null && $search !== '') {
+            $query->where('nama_lomba', 'like', '%' . $search . '%');
+        }
+
+        // Filter status sesuai tampilan frontend
+        
+        if ($status === 'Segera') {
+            $query->where('status', 'Dibuka')
+        ->whereHas('jadwal', function ($q) {
+            $q->whereDate('tanggal', '>=', now()->toDateString());
+        });
+}       elseif ($status === 'Selesai') {
+            $query->where('status', 'Selesai');
+}
+
+        $lomba = $query
+            ->orderBy('nama_lomba')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar lomba berhasil diambil',
+            'data' => $lomba,
+        ]);
+    }
+
+    // PB-03: Detail lomba warga
+    public function show(int $id): JsonResponse
+    {
+        $periode = DB::table('periode')
+            ->where('status', 'Aktif')
+            ->orderByDesc('tahun')
+            ->first();
+
+        $lomba = $periode
+            ? Lomba::with([
+                'kategori',
+                'detail',
+                'jadwal' => function ($query) {
+                    $query->orderBy('tanggal')
+                        ->orderBy('waktu_mulai');
+                },
+            ])
+                ->where('id_periode', $periode->id_periode)
+                ->where('status', '!=', 'Nonaktif')
+                ->where('id_lomba', $id)
+                ->first()
+            : null;
+
+        if (!$lomba) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lomba tidak ditemukan',
+                'data' => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail lomba berhasil diambil',
+            'data' => $lomba,
+        ]);
+    }
+}
+
+
+
+========================================
+FILE: app/Http/Controllers/Api/BerandaController.php
+========================================
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class BerandaController extends Controller
+{
+    /**
+     * @OA\Get(
+     *     path="/api/warga/beranda",
+     *     operationId="getBerandaWarga",
+     *     tags={"PB-02 Beranda Warga"},
+     *     summary="Menampilkan data beranda warga",
+     *     description="Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung. Endpoint khusus role Warga.",
+     *     security={{"sanctum":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="tanggal",
+     *         in="query",
+     *         required=false,
+     *         description="Tanggal agenda dengan format YYYY-MM-DD. Default menggunakan tanggal hari ini.",
+     *         @OA\Schema(
+     *             type="string",
+     *             format="date",
+     *             example="2026-08-15"
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Data beranda warga berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="success",
+     *                 type="boolean",
+     *                 example=true
+     *             ),
+     *             @OA\Property(
+     *                 property="message",
+     *                 type="string",
+     *                 example="Data beranda warga berhasil diambil"
+     *             ),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *
+     *                 @OA\Property(
+     *                     property="banner",
+     *                     type="object",
+     *                     nullable=true,
+     *                     @OA\Property(
+     *                         property="id_periode",
+     *                         type="integer",
+     *                         example=1
+     *                     ),
+     *                     @OA\Property(
+     *                         property="judul",
+     *                         type="string",
+     *                         example="Semarak HUT RI ke-81"
+     *                     ),
+     *                     @OA\Property(
+     *                         property="tahun",
+     *                         type="string",
+     *                         example="2026"
+     *                     ),
+     *                     @OA\Property(
+     *                         property="deskripsi",
+     *                         type="string",
+     *                         example="Nusantara Bersuka, Indonesia Berjaya"
+     *                     ),
+     *                     @OA\Property(
+     *                         property="logo",
+     *                         type="string",
+     *                         nullable=true
+     *                     )
+     *                 ),
+     *
+     *                 @OA\Property(
+     *                     property="tanggal_filter",
+     *                     type="string",
+     *                     format="date",
+     *                     example="2026-08-15"
+     *                 ),
+     *
+     *                 @OA\Property(
+     *                     property="jadwal_agenda",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         type="object",
+     *                         @OA\Property(
+     *                             property="id_jadwal",
+     *                             type="integer",
+     *                             example=1
+     *                         ),
+     *                         @OA\Property(
+     *                             property="id_lomba",
+     *                             type="integer",
+     *                             example=1
+     *                         ),
+     *                         @OA\Property(
+     *                             property="nama_lomba",
+     *                             type="string",
+     *                             example="Tarik Tambang"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="nama_kategori",
+     *                             type="string",
+     *                             example="Dewasa"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="tanggal",
+     *                             type="string",
+     *                             format="date",
+     *                             example="2026-08-15"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="waktu_mulai",
+     *                             type="string",
+     *                             example="09:00:00"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="waktu_selesai",
+     *                             type="string",
+     *                             example="11:00:00"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="lokasi",
+     *                             type="string",
+     *                             example="Lapangan Timur"
+     *                         )
+     *                     )
+     *                 ),
+     *
+     *                 @OA\Property(
+     *                     property="pengumuman_terbaru",
+     *                     type="object",
+     *                     nullable=true,
+     *                     @OA\Property(
+     *                         property="id_pengumuman",
+     *                         type="integer",
+     *                         example=1
+     *                     ),
+     *                     @OA\Property(
+     *                         property="judul",
+     *                         type="string",
+     *                         example="Pengumuman Jadwal Lomba 17 Agustus"
+     *                     ),
+     *                     @OA\Property(
+     *                         property="isi",
+     *                         type="string",
+     *                         example="Seluruh warga diharapkan hadir dan mengikuti perlombaan 17 Agustus."
+     *                     ),
+     *                     @OA\Property(
+     *                         property="tanggal_publikasi",
+     *                         type="string",
+     *                         example="2026-08-14 08:00:00"
+     *                     )
+     *                 ),
+     *
+     *                 @OA\Property(
+     *                     property="sedang_berlangsung",
+     *                     type="array",
+     *                     description="Daftar pertandingan yang berstatus Berlangsung",
+     *                     @OA\Items(
+     *                         type="object",
+     *                         @OA\Property(
+     *                             property="id_pertandingan",
+     *                             type="integer",
+     *                             example=1
+     *                         ),
+     *                         @OA\Property(
+     *                             property="id_lomba",
+     *                             type="integer",
+     *                             example=1
+     *                         ),
+     *                         @OA\Property(
+     *                             property="nama_lomba",
+     *                             type="string",
+     *                             example="Tarik Tambang"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="peserta_1",
+     *                             type="string",
+     *                             example="RT 01"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="peserta_2",
+     *                             type="string",
+     *                             example="RT 02"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="waktu_mulai",
+     *                             type="string",
+     *                             example="2026-08-15 09:00:00"
+     *                         ),
+     *                         @OA\Property(
+     *                             property="status",
+     *                             type="string",
+     *                             example="Berlangsung"
+     *                         )
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=401,
+     *         description="Pengguna belum login"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Pengguna tidak memiliki role Warga"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Format tanggal tidak valid"
+     *     )
+     * )
+     */
+    public function index(Request $request): JsonResponse
+    {
+        // 1. Ambil dan validasi tanggal
+        $tanggal = $request->query(
+            'tanggal',
+            now()->toDateString()
+        );
+
+        $request->merge(['tanggal' => $tanggal]);
+
+        $request->validate([
+            'tanggal' => 'required|date_format:Y-m-d',
+        ]);
+
+        // 2. Ambil periode kegiatan aktif
+        $periode = DB::table('periode')
+            ->where('status', 'Aktif')
+            ->orderByDesc('tahun')
+            ->first();
+
+        // 3. Ambil jadwal lomba sesuai tanggal
+        $jadwal = DB::table('jadwal_lomba as j')
+            ->join(
+                'lomba as l',
+                'j.id_lomba',
+                '=',
+                'l.id_lomba'
+            )
+            ->join(
+                'kategori_lomba as k',
+                'l.id_kategori',
+                '=',
+                'k.id_kategori'
+            )
+            ->when($periode, function ($query) use ($periode) {
+                $query->where(
+                    'l.id_periode',
+                    $periode->id_periode
+                );
+            })
+            ->whereDate('j.tanggal', $tanggal)
+            ->where('l.status', 'Dibuka')
+            ->orderBy('j.waktu_mulai')
+            ->select(
+                'j.id_jadwal',
+                'l.id_lomba',
+                'l.nama_lomba',
+                'k.nama_kategori',
+                'j.tanggal',
+                'j.waktu_mulai',
+                'j.waktu_selesai',
+                'j.lokasi'
+            )
+            ->get();
+
+        // 4. Ambil pengumuman terbaru
+        $pengumuman = null;
+
+        if ($periode) {
+            $pengumuman = DB::table('pengumuman')
+                ->where('id_periode', $periode->id_periode)
+                ->where('status', 'Dipublikasi')
+                ->whereNotNull('tanggal_publikasi')
+                ->where('tanggal_publikasi', '<=', now())
+                ->orderByDesc('tanggal_publikasi')
+                ->first();
+        }
+
+        // 5. Ambil pertandingan yang sedang berlangsung
+        $pertandingan = DB::table('pertandingan as p')
+            ->join(
+                'lomba as l',
+                'p.id_lomba',
+                '=',
+                'l.id_lomba'
+            )
+            ->where('p.status', 'Berlangsung')
+            ->when($periode, function ($query) use ($periode) {
+                $query->where(
+                    'l.id_periode',
+                    $periode->id_periode
+                );
+            })
+            ->select(
+                'p.id_pertandingan',
+                'l.id_lomba',
+                'l.nama_lomba',
+                'p.peserta_1',
+                'p.peserta_2',
+                'p.waktu_mulai',
+                'p.status'
+            )
+            ->orderBy('p.waktu_mulai')
+            ->get();
+
+        // 6. Kirim respons JSON
+        return response()->json([
+            'success' => true,
+            'message' => 'Data beranda warga berhasil diambil',
+            'data' => [
+                'banner' => $periode ? [
+                    'id_periode' => $periode->id_periode,
+                    'judul' => $periode->nama_kegiatan,
+                    'tahun' => $periode->tahun,
+                    'deskripsi' => $periode->deskripsi,
+                    'logo' => $periode->logo,
+                ] : null,
+
+                'tanggal_filter' => $tanggal,
+
+                'jadwal_agenda' => $jadwal,
+
+                'pengumuman_terbaru' => $pengumuman ? [
+                    'id_pengumuman' => $pengumuman->id_pengumuman,
+                    'judul' => $pengumuman->judul,
+                    'isi' => $pengumuman->isi,
+                    'tanggal_publikasi' =>
+                        $pengumuman->tanggal_publikasi,
+                ] : null,
+
+                'sedang_berlangsung' => $pertandingan,
+            ],
+        ]);
+    }
+}
+
+
+
+========================================
+FILE: database/seeders/DatabaseSeeder.php
+========================================
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $this->call([
+            RoleSeeder::class,
+            RwRtSeeder::class,
+            AdminUserSeeder::class,
+        ]);
+    }
+}
+
+
+========================================
+FILE: database/seeders/RwRtSeeder.php
+========================================
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Rw;
+use App\Models\Rt;
+use Illuminate\Database\Seeder;
+
+class RwRtSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $rw = Rw::updateOrCreate(
+            [
+                'nomor_rw' => '01',
+            ],
+            [
+                'nama_rw' => 'RW 01',
+            ]
+        );
+
+        $rtList = [
+            [
+                'nomor_rt' => '01',
+                'nama_rt' => 'RT 01',
+            ],
+            [
+                'nomor_rt' => '02',
+                'nama_rt' => 'RT 02',
+            ],
+            [
+                'nomor_rt' => '03',
+                'nama_rt' => 'RT 03',
+            ],
+        ];
+
+        foreach ($rtList as $rt) {
+            Rt::updateOrCreate(
+                [
+                    'id_rw' => $rw->id_rw,
+                    'nomor_rt' => $rt['nomor_rt'],
+                ],
+                [
+                    'nama_rt' => $rt['nama_rt'],
+                ]
+            );
+        }
+    }
+}
+
+
+========================================
+FILE: database/seeders/RoleSeeder.php
+========================================
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Role;
+use Illuminate\Database\Seeder;
+
+class RoleSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $roles = [
+            [
+                'id_role' => 1,
+                'nama_role' => 'Admin',
+                'deskripsi' => 'Mengelola keseluruhan sistem dan data administrasi.',
+            ],
+            [
+                'id_role' => 2,
+                'nama_role' => 'Panitia',
+                'deskripsi' => 'Mengelola operasional perlombaan dan kegiatan.',
+            ],
+            [
+                'id_role' => 3,
+                'nama_role' => 'Warga',
+                'deskripsi' => 'Mengakses layanan perlombaan sebagai warga.',
+            ],
+        ];
+
+        foreach ($roles as $role) {
+            Role::updateOrCreate(
+                [
+                    'id_role' => $role['id_role'],
+                ],
+                [
+                    'nama_role' => $role['nama_role'],
+                    'deskripsi' => $role['deskripsi'],
+                ]
+            );
+        }
+    }
+}
+
+
+========================================
+FILE: database/seeders/AdminUserSeeder.php
+========================================
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Rt;
+use App\Models\Akun;
+use App\Models\Warga;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+class AdminUserSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $rt = Rt::where('nomor_rt', '01')
+            ->whereHas('rw', function ($query) {
+                $query->where('nomor_rw', '01');
+            })
+            ->firstOrFail();
+
+        $adminWarga = Warga::updateOrCreate(
+            [
+                'nik' => '0000000000000001',
+            ],
+            [
+                'id_rt' => $rt->id_rt,
+                'nama' => 'Administrator',
+                'no_hp' => '6281234567890',
+                'alamat' => 'Sekretariat RW 01',
+                'jenis_kelamin' => 'L',
+                'tanggal_lahir' => '2000-01-01',
+                'status' => 'Aktif',
+            ]
+        );
+
+        Akun::updateOrCreate(
+            [
+                'username' => env('ADMIN_USERNAME', 'admin'),
+            ],
+            [
+                'id_warga' => $adminWarga->id_warga,
+                'id_role' => 1,
+
+                'password' => Hash::make(
+                    env('ADMIN_PASSWORD')
+                ),
+
+                'status' => 'Aktif',
+            ]
+        );
+    }
+}
+
+
+========================================
+SEMUA MIGRATION DATABASE
+========================================
+
+
+FILE: 2014_10_12_000000_create_users_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->rememberToken();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+    }
+};
+
+
+
+FILE: 2014_10_12_100000_create_password_reset_tokens_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('password_reset_tokens');
+    }
+};
+
+
+
+FILE: 2019_08_19_000000_create_failed_jobs_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('failed_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('failed_jobs');
+    }
+};
+
+
+
+FILE: 2019_12_14_000001_create_personal_access_tokens_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('personal_access_tokens');
+    }
+};
+
+
+
+FILE: 2024_01_01_000001_create_role_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('role', function (Blueprint $table) {
+            $table->id('id_role');
+            $table->string('nama_role', 50);
+            $table->text('deskripsi')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('role');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000002_create_rw_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('rw', function (Blueprint $table) {
+            $table->id('id_rw');
+            $table->string('nomor_rw', 10);
+            $table->string('nama_rw', 100)->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('rw');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000003_create_rt_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('rt', function (Blueprint $table) {
+            $table->id('id_rt');
+            $table->unsignedBigInteger('id_rw');
+            $table->string('nomor_rt', 10);
+            $table->string('nama_rt', 100)->nullable();
+            $table->timestamps();
+
+            $table->foreign('id_rw')->references('id_rw')->on('rw')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('rt');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000004_create_warga_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('warga', function (Blueprint $table) {
+            $table->id('id_warga');
+            $table->unsignedBigInteger('id_rt');
+            $table->string('nik', 20)->nullable()->unique();
+            $table->string('nama', 150);
+            $table->string('no_hp', 20)->nullable();
+            $table->text('alamat')->nullable();
+            $table->enum('jenis_kelamin', ['L', 'P']);
+            $table->date('tanggal_lahir')->nullable();
+            $table->enum('status', ['Aktif', 'Nonaktif'])->default('Aktif');
+            $table->timestamps();
+
+            $table->foreign('id_rt')->references('id_rt')->on('rt')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('warga');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000005_create_akun_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('akun', function (Blueprint $table) {
+            $table->id('id_akun');
+            $table->unsignedBigInteger('id_warga')->unique();
+            $table->unsignedBigInteger('id_role');
+            $table->string('username', 50)->unique();
+            $table->string('password');
+            $table->enum('status', ['Aktif', 'Nonaktif'])->default('Aktif');
+            $table->dateTime('last_login')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+
+            $table->foreign('id_warga')->references('id_warga')->on('warga')->onDelete('cascade');
+            $table->foreign('id_role')->references('id_role')->on('role')->onDelete('restrict');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('akun');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000006_create_periode_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('periode', function (Blueprint $table) {
+            $table->id('id_periode');
+            $table->year('tahun');
+            $table->string('nama_kegiatan', 150);
+            $table->string('logo')->nullable();
+            $table->text('deskripsi')->nullable();
+            $table->enum('status', ['Aktif', 'Selesai'])->default('Aktif');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('periode');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000007_create_kategori_lomba_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('kategori_lomba', function (Blueprint $table) {
+            $table->id('id_kategori');
+            $table->string('nama_kategori', 100);
+            $table->text('deskripsi')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('kategori_lomba');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000008_create_lomba_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('lomba', function (Blueprint $table) {
+            $table->id('id_lomba');
+            $table->unsignedBigInteger('id_periode');
+            $table->unsignedBigInteger('id_kategori');
+            $table->string('nama_lomba', 100);
+            $table->text('deskripsi')->nullable();
+            $table->string('gambar')->nullable();
+            $table->enum('status', ['Dibuka', 'Selesai', 'Nonaktif'])->default('Dibuka');
+            $table->timestamps();
+
+            $table->foreign('id_periode')->references('id_periode')->on('periode')->onDelete('cascade');
+            $table->foreign('id_kategori')->references('id_kategori')->on('kategori_lomba')->onDelete('restrict');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('lomba');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000009_create_detail_lomba_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('detail_lomba', function (Blueprint $table) {
+            $table->id('id_detail');
+            $table->unsignedBigInteger('id_lomba')->unique();
+            $table->text('deskripsi')->nullable();
+            $table->text('alur')->nullable();
+            $table->text('syarat')->nullable();
+            $table->text('peraturan')->nullable();
+            $table->timestamps();
+
+            $table->foreign('id_lomba')->references('id_lomba')->on('lomba')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('detail_lomba');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000010_create_jadwal_lomba_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('jadwal_lomba', function (Blueprint $table) {
+            $table->id('id_jadwal');
+            $table->unsignedBigInteger('id_lomba');
+            $table->date('tanggal');
+            $table->time('waktu_mulai')->nullable();
+            $table->time('waktu_selesai')->nullable();
+            $table->string('lokasi', 150)->nullable();
+            $table->timestamps();
+
+            $table->foreign('id_lomba')->references('id_lomba')->on('lomba')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('jadwal_lomba');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000011_create_kepanitiaan_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('kepanitiaan', function (Blueprint $table) {
+            $table->id('id_panitia');
+            $table->unsignedBigInteger('id_warga');
+            $table->unsignedBigInteger('id_periode');
+            $table->string('jabatan', 100);
+            $table->enum('status', ['Aktif', 'Nonaktif'])->default('Aktif');
+            $table->timestamps();
+
+            $table->foreign('id_warga')->references('id_warga')->on('warga')->onDelete('cascade');
+            $table->foreign('id_periode')->references('id_periode')->on('periode')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('kepanitiaan');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000012_create_pendaftaran_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('pendaftaran', function (Blueprint $table) {
+            $table->id('id_pendaftaran');
+            $table->unsignedBigInteger('id_warga');
+            $table->unsignedBigInteger('id_lomba');
+            $table->dateTime('tanggal_daftar');
+            $table->enum('status', ['Menunggu', 'Diterima', 'Ditolak'])->default('Menunggu');
+            $table->text('catatan')->nullable();
+            $table->timestamps();
+
+            $table->foreign('id_warga')->references('id_warga')->on('warga')->onDelete('cascade');
+            $table->foreign('id_lomba')->references('id_lomba')->on('lomba')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('pendaftaran');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000013_create_iuran_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('iuran', function (Blueprint $table) {
+            $table->id('id_iuran');
+            $table->unsignedBigInteger('id_warga');
+            $table->unsignedBigInteger('id_periode');
+            $table->decimal('nominal', 12, 2);
+            $table->date('jatuh_tempo');
+            $table->enum('status', ['Belum Bayar', 'Sudah Bayar'])->default('Belum Bayar');
+            $table->timestamps();
+
+            $table->foreign('id_warga')->references('id_warga')->on('warga')->onDelete('cascade');
+            $table->foreign('id_periode')->references('id_periode')->on('periode')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('iuran');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000014_create_pembayaran_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('pembayaran', function (Blueprint $table) {
+            $table->id('id_pembayaran');
+            $table->unsignedBigInteger('id_iuran');
+            $table->dateTime('tanggal_bayar');
+            $table->decimal('nominal', 12, 2);
+            $table->string('metode', 50)->nullable();
+            $table->string('bukti_bayar')->nullable();
+            $table->enum('status_verifikasi', ['Menunggu', 'Diterima', 'Ditolak'])->default('Menunggu');
+            $table->unsignedBigInteger('diverifikasi_oleh')->nullable();
+            $table->dateTime('tanggal_verifikasi')->nullable();
+            $table->timestamps();
+
+            $table->foreign('id_iuran')->references('id_iuran')->on('iuran')->onDelete('cascade');
+            $table->foreign('diverifikasi_oleh')->references('id_akun')->on('akun')->onDelete('set null');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('pembayaran');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000015_create_notifikasi_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('notifikasi', function (Blueprint $table) {
+            $table->id('id_notifikasi');
+            $table->unsignedBigInteger('id_warga');
+            $table->string('judul', 150);
+            $table->text('pesan');
+            $table->enum('tipe', ['Iuran', 'Lomba', 'Akun', 'Umum'])->default('Umum');
+            $table->boolean('status_baca')->default(false);
+            $table->timestamps();
+
+            $table->foreign('id_warga')->references('id_warga')->on('warga')->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('notifikasi');
+    }
+};
+
+
+
+
+FILE: 2024_01_01_000016_create_dokumentasi_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('dokumentasi', function (Blueprint $table) {
+            $table->id('id_dokumentasi');
+            $table->unsignedBigInteger('id_lomba')->nullable();
+            $table->unsignedBigInteger('id_panitia')->nullable();
+            $table->enum('jenis_file', ['Foto', 'Video'])->default('Foto');
+            $table->string('file');
+            $table->text('keterangan')->nullable();
+            $table->timestamps();
+
+            $table->foreign('id_lomba')->references('id_lomba')->on('lomba')->onDelete('cascade');
+            $table->foreign('id_panitia')->references('id_panitia')->on('kepanitiaan')->onDelete('set null');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('dokumentasi');
+    }
+};
+
+
+
+
+FILE: 2026_10_08_184728_create_pengumuman_table.php
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('pengumuman', function (Blueprint $table) {
+            $table->id('id_pengumuman');
+
+            $table->unsignedBigInteger('id_periode');
+            $table->unsignedBigInteger('id_akun');
+
+            $table->string('judul', 150);
+            $table->text('isi');
+
+            $table->dateTime('tanggal_publikasi')->nullable();
+
+            $table->enum('status', [
+                'Draft',
+                'Dipublikasi'
+            ])->default('Draft');
+
+            $table->timestamps();
+
+            $table->foreign('id_periode')
+                ->references('id_periode')
+                ->on('periode')
+                ->onDelete('cascade');
+
+            $table->foreign('id_akun')
+                ->references('id_akun')
+                ->on('akun')
+                ->onDelete('restrict');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('pengumuman');
+    }
+};
+
+
+
+FILE: 2026_10_08_191015_create_pertandingan_table.php
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('pertandingan', function (Blueprint $table) {
+            $table->id('id_pertandingan');
+
+            $table->unsignedBigInteger('id_lomba');
+
+            $table->string('peserta_1', 150);
+            $table->string('peserta_2', 150);
+
+            $table->dateTime('waktu_mulai');
+
+            $table->enum('status', [
+                'Dijadwalkan',
+                'Berlangsung',
+                'Selesai'
+            ])->default('Dijadwalkan');
+
+            $table->timestamps();
+
+            $table->foreign('id_lomba')
+                ->references('id_lomba')
+                ->on('lomba')
+                ->onDelete('cascade');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('pertandingan');
+    }
+};
+
+
+
+FILE: 2026_10_29_204000_add_tim_dan_anggota_pendaftaran.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // 1. Tambah kolom nama_tim pada tabel pendaftaran (nullable untuk pendaftaran individu)
+        Schema::table('pendaftaran', function (Blueprint $table) {
+            $table->string('nama_tim', 100)->nullable()->after('id_lomba');
+        });
+
+        // 2. Buat tabel anggota_pendaftaran untuk menyimpan daftar anggota tim
+        Schema::create('anggota_pendaftaran', function (Blueprint $table) {
+            $table->id('id_anggota');
+            $table->unsignedBigInteger('id_pendaftaran');
+            $table->string('nama', 100);
+            $table->string('no_hp', 20);
+            $table->timestamps();
+
+            $table->foreign('id_pendaftaran')
+                ->references('id_pendaftaran')
+                ->on('pendaftaran')
+                ->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('anggota_pendaftaran');
+
+        Schema::table('pendaftaran', function (Blueprint $table) {
+            $table->dropColumn('nama_tim');
+        });
+    }
+};
+
+
+
+
+FILE: 2026_10_29_210000_add_jenis_pendaftaran_to_lomba_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('lomba', function (Blueprint $table) {
+            $table->string('jenis_pendaftaran', 30)
+                ->default('Individu')
+                ->after('nama_lomba');
+        });
+
+        // Perbarui data lomba yang sudah ada:
+        // Tarik Tambang dan Futsal Sarung menjadi Beregu.
+        // Mencakup nama yang sama pada periode berbeda jika memang ada.
+        DB::table('lomba')
+            ->whereIn('nama_lomba', ['Tarik Tambang', 'Futsal Sarung'])
+            ->update(['jenis_pendaftaran' => 'Beregu']);
+
+        DB::table('lomba')
+            ->whereNotIn('nama_lomba', ['Tarik Tambang', 'Futsal Sarung'])
+            ->update(['jenis_pendaftaran' => 'Individu']);
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('lomba', function (Blueprint $table) {
+            $table->dropColumn('jenis_pendaftaran');
+        });
+    }
+};
+
+

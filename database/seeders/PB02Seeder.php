@@ -72,6 +72,7 @@ class PB02Seeder extends Seeder
                 [
                     'nama' => 'Tarik Tambang',
                     'kategori' => 'Dewasa',
+                    'jenis_pendaftaran' => 'Beregu',
                     'tanggal' => '2026-08-15',
                     'mulai' => '09:00:00',
                     'selesai' => '11:00:00',
@@ -80,6 +81,7 @@ class PB02Seeder extends Seeder
                 [
                     'nama' => 'Catur',
                     'kategori' => 'Umum',
+                    'jenis_pendaftaran' => 'Individu',
                     'tanggal' => '2026-08-15',
                     'mulai' => '10:00:00',
                     'selesai' => '12:00:00',
@@ -88,6 +90,7 @@ class PB02Seeder extends Seeder
                 [
                     'nama' => 'Futsal Sarung',
                     'kategori' => 'Dewasa',
+                    'jenis_pendaftaran' => 'Beregu',
                     'tanggal' => '2026-08-16',
                     'mulai' => '09:00:00',
                     'selesai' => '11:30:00',
@@ -96,6 +99,7 @@ class PB02Seeder extends Seeder
                 [
                     'nama' => 'Makan Kerupuk',
                     'kategori' => 'Umum',
+                    'jenis_pendaftaran' => 'Individu',
                     'tanggal' => '2026-08-16',
                     'mulai' => '09:30:00',
                     'selesai' => '11:00:00',
@@ -104,6 +108,7 @@ class PB02Seeder extends Seeder
                 [
                     'nama' => 'Mewarnai',
                     'kategori' => 'Anak-anak',
+                    'jenis_pendaftaran' => 'Individu',
                     'tanggal' => '2026-08-16',
                     'mulai' => '13:00:00',
                     'selesai' => '15:00:00',
@@ -126,6 +131,7 @@ class PB02Seeder extends Seeder
                     ],
                     [
                         'id_kategori' => $idKategori,
+                        'jenis_pendaftaran' => $item['jenis_pendaftaran'],
                         'deskripsi' => 'Perlombaan dalam rangka HUT RI ke-81.',
                         'status' => 'Dibuka',
                     ]

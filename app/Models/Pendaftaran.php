@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pendaftaran extends Model
 {
@@ -16,6 +17,7 @@ class Pendaftaran extends Model
     protected $fillable = [
         'id_warga',
         'id_lomba',
+        'nama_tim',
         'tanggal_daftar',
         'status',
         'catatan',
@@ -33,6 +35,11 @@ class Pendaftaran extends Model
     public function lomba(): BelongsTo
     {
         return $this->belongsTo(Lomba::class, 'id_lomba', 'id_lomba');
+    }
+
+    public function anggota(): HasMany
+    {
+        return $this->hasMany(AnggotaPendaftaran::class, 'id_pendaftaran', 'id_pendaftaran');
     }
 }
 

@@ -110,7 +110,7 @@
         "/api/warga/beranda": {
             "get": {
                 "tags": [
-                    "PB-02 Beranda Warga"
+                    "Beranda Warga"
                 ],
                 "summary": "Menampilkan data beranda warga",
                 "description": "Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung. Endpoint khusus role Warga.",
@@ -301,6 +301,853 @@
                     }
                 ]
             }
+        },
+        "/api/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard Admin"
+                ],
+                "summary": "Mengakses dashboard Admin",
+                "description": "Dashboard Admin.",
+                "operationId": "getDashboardAdmin",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard Admin berhasil diakses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dashboard Admin"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard Panitia"
+                ],
+                "summary": "Mengakses dashboard Panitia",
+                "description": "Dashboard Panitia.",
+                "operationId": "getDashboardPanitia",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard Panitia berhasil diakses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dashboard Panitia"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard Warga"
+                ],
+                "summary": "Mengakses dashboard Warga",
+                "description": "Dashboard Warga.",
+                "operationId": "getDashboardWarga",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard Warga berhasil diakses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dashboard Warga"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/iuran": {
+            "get": {
+                "tags": [
+                    "Warga - Iuran & Pembayaran"
+                ],
+                "summary": "Melihat daftar iuran warga",
+                "description": "Mengambil daftar tagihan iuran milik warga login. Mendukung filter status iuran (Semua, Belum Bayar, Sudah Bayar).",
+                "operationId": "getDaftarIuranWarga",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter status pembayaran iuran",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Semua",
+                                "Belum Bayar",
+                                "Sudah Bayar"
+                            ]
+                        },
+                        "example": "Belum Bayar"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar iuran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar tagihan iuran berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Bukan warga)"
+                    },
+                    "422": {
+                        "description": "Filter status tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/iuran/{id_iuran}": {
+            "get": {
+                "tags": [
+                    "Warga - Iuran & Pembayaran"
+                ],
+                "summary": "Melihat detail iuran warga",
+                "description": "Menampilkan detail satu tagihan iuran dan riwayat pengajuan pembayarannya. Hanya dapat diakses oleh pemilik iuran.",
+                "operationId": "getDetailIuranWarga",
+                "parameters": [
+                    {
+                        "name": "id_iuran",
+                        "in": "path",
+                        "description": "ID tagihan iuran",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail iuran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail iuran berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Bukan warga)"
+                    },
+                    "404": {
+                        "description": "Iuran tidak ditemukan atau bukan milik warga"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/iuran/{id_iuran}/pembayaran": {
+            "post": {
+                "tags": [
+                    "Warga - Iuran & Pembayaran"
+                ],
+                "summary": "Mengajukan pembayaran iuran",
+                "description": "Mengirim nominal, metode pembayaran, dan berkas foto bukti bayar. Pengajuan pembayaran berstatus awal Menunggu dan tidak langsung mengubah status iuran menjadi lunas.",
+                "operationId": "ajukanPembayaranIuranWarga",
+                "parameters": [
+                    {
+                        "name": "id_iuran",
+                        "in": "path",
+                        "description": "ID tagihan iuran yang ingin dibayar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
+                "requestBody": {
+                    "description": "Data pengajuan pembayaran iuran dan berkas bukti",
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "metode",
+                                    "nominal",
+                                    "bukti_bayar"
+                                ],
+                                "properties": {
+                                    "metode": {
+                                        "description": "Metode pembayaran",
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "Transfer Bank BCA"
+                                    },
+                                    "nominal": {
+                                        "description": "Nominal yang dibayarkan (harus sama persis dengan tagihan iuran)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50000
+                                    },
+                                    "bukti_bayar": {
+                                        "description": "Berkas gambar bukti transfer (jpeg, png, jpg, webp maks 2MB)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pembayaran berhasil diajukan dan sedang menunggu verifikasi panitia",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pembayaran iuran berhasil diajukan dan sedang menunggu verifikasi panitia."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Bukan warga)"
+                    },
+                    "404": {
+                        "description": "Data iuran tidak ditemukan"
+                    },
+                    "409": {
+                        "description": "Pengajuan pembayaran sebelumnya masih menunggu verifikasi panitia"
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity - Nominal tidak cocok, iuran sudah lunas, atau berkas tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/lomba": {
+            "get": {
+                "tags": [
+                    "Warga - Lomba"
+                ],
+                "summary": "Mengambil daftar lomba",
+                "description": "Mengambil daftar lomba pada periode aktif, dengan pencarian dan filter status.",
+                "operationId": "getDaftarLombaWarga",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Pencarian berdasarkan nama lomba",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100
+                        },
+                        "example": "catur"
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter status lomba",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Semua",
+                                "Segera",
+                                "Selesai"
+                            ]
+                        },
+                        "example": "Semua"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar lomba berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar lomba berhasil diambil"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Role tidak diizinkan"
+                    },
+                    "422": {
+                        "description": "Parameter tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/lomba/{id}": {
+            "get": {
+                "tags": [
+                    "Warga - Lomba"
+                ],
+                "summary": "Mengambil detail lomba",
+                "operationId": "getDetailLombaWarga",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID lomba",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail lomba berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/notifikasi": {
+            "get": {
+                "tags": [
+                    "Warga - Notifikasi"
+                ],
+                "summary": "Melihat daftar notifikasi warga",
+                "description": "PB-06: Mengambil seluruh notifikasi milik warga yang login.",
+                "operationId": "getNotifikasiWarga",
+                "parameters": [
+                    {
+                        "name": "status_baca",
+                        "in": "query",
+                        "description": "Filter status baca: true atau false",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "example": false
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar notifikasi berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akun tidak terhubung dengan warga"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/notifikasi/unread-count": {
+            "get": {
+                "tags": [
+                    "Warga - Notifikasi"
+                ],
+                "summary": "Mengambil jumlah notifikasi belum dibaca",
+                "description": "PB-06: Mengambil jumlah notifikasi yang belum dibaca (unread count).",
+                "operationId": "getJumlahNotifikasiBelumDibaca",
+                "responses": {
+                    "200": {
+                        "description": "Jumlah notifikasi berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "unread_count": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/notifikasi/{id_notifikasi}/read": {
+            "patch": {
+                "tags": [
+                    "Warga - Notifikasi"
+                ],
+                "summary": "Menandai satu notifikasi sebagai sudah dibaca",
+                "description": "PB-06: Menandai satu notifikasi telah dibaca (idempotent)",
+                "operationId": "tandaiNotifikasiDibaca",
+                "parameters": [
+                    {
+                        "name": "id_notifikasi",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notifikasi berhasil ditandai sudah dibaca",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "404": {
+                        "description": "Notifikasi tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/notifikasi/read-all": {
+            "patch": {
+                "tags": [
+                    "Warga - Notifikasi"
+                ],
+                "summary": "Menandai semua notifikasi sebagai sudah dibaca",
+                "description": "PB-06: Menandai semua notifikasi milik warga sebagai sudah dibaca.",
+                "operationId": "tandaiSemuaNotifikasiDibaca",
+                "responses": {
+                    "200": {
+                        "description": "Semua notifikasi berhasil ditandai sudah dibaca",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "updated_count": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Warga - Pendaftaran"
+                ],
+                "summary": "Melihat riwayat pendaftaran lomba",
+                "description": "PB-04: Mengambil riwayat pendaftaran milik warga yang sedang login (Individu & Beregu).",
+                "operationId": "getRiwayatPendaftaranWarga",
+                "responses": {
+                    "200": {
+                        "description": "Riwayat pendaftaran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akun tidak terhubung dengan warga"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Warga - Pendaftaran"
+                ],
+                "summary": "Mendaftarkan warga ke perlombaan (Individu atau Beregu)",
+                "description": "Mendaftar ke lomba yang berstatus Dibuka. Untuk lomba individu (Catur, Makan Kerupuk, Mewarnai), cukup mengirim 'id_lomba'. Untuk lomba beregu (Tarik Tambang, Futsal Sarung), wajib menyertakan 'nama_tim' dan array 'anggota' minimal 1 orang.",
+                "operationId": "buatPendaftaranLombaWarga",
+                "requestBody": {
+                    "description": "Data pendaftaran lomba",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_lomba"
+                                ],
+                                "properties": {
+                                    "id_lomba": {
+                                        "description": "ID lomba yang ingin didaftarkan",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nama_tim": {
+                                        "description": "Wajib untuk lomba beregu, tidak boleh diisi untuk lomba individu",
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "example": "Garuda Muda",
+                                        "nullable": true
+                                    },
+                                    "anggota": {
+                                        "description": "Daftar anggota tim (wajib untuk lomba beregu, minimal 1 anggota)",
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "nama",
+                                                "no_hp"
+                                            ],
+                                            "properties": {
+                                                "nama": {
+                                                    "type": "string",
+                                                    "maxLength": 100,
+                                                    "example": "Ahmad Dahlan"
+                                                },
+                                                "no_hp": {
+                                                    "type": "string",
+                                                    "maxLength": 20,
+                                                    "example": "081234567891"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pendaftaran lomba berhasil diajukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pendaftaran lomba berhasil diajukan."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Bukan warga atau akun belum terhubung data warga)"
+                    },
+                    "409": {
+                        "description": "Conflict - Anda sudah terdaftar pada perlombaan ini"
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity - Validasi gagal, lomba tidak ditemukan, lomba ditutup, atau format data tim tidak sesuai"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -319,8 +1166,36 @@
             "description": "Authentication"
         },
         {
-            "name": "PB-02 Beranda Warga",
-            "description": "PB-02 Beranda Warga"
+            "name": "Beranda Warga",
+            "description": "Beranda Warga"
+        },
+        {
+            "name": "Dashboard Admin",
+            "description": "Dashboard Admin"
+        },
+        {
+            "name": "Dashboard Panitia",
+            "description": "Dashboard Panitia"
+        },
+        {
+            "name": "Dashboard Warga",
+            "description": "Dashboard Warga"
+        },
+        {
+            "name": "Warga - Iuran & Pembayaran",
+            "description": "Warga - Iuran & Pembayaran"
+        },
+        {
+            "name": "Warga - Lomba",
+            "description": "Warga - Lomba"
+        },
+        {
+            "name": "Warga - Notifikasi",
+            "description": "Warga - Notifikasi"
+        },
+        {
+            "name": "Warga - Pendaftaran",
+            "description": "Warga - Pendaftaran"
         }
     ]
 }

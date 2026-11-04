@@ -11,6 +11,50 @@ use Illuminate\Validation\Rule;
 
 class LombaController extends Controller
 {
+    
+    /**
+     * @OA\Get(
+     *     path="/api/warga/lomba",
+     *     operationId="getDaftarLombaWarga",
+     *     tags={"Warga - Lomba"},
+     *     summary="Mengambil daftar lomba",
+     *     description="Mengambil daftar lomba pada periode aktif, dengan pencarian dan filter status.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         required=false,
+     *         description="Pencarian berdasarkan nama lomba",
+     *         @OA\Schema(type="string", maxLength=100),
+     *         example="catur"
+     *     ),
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         required=false,
+     *         description="Filter status lomba",
+     *         @OA\Schema(type="string", enum={"Semua","Segera","Selesai"}),
+     *         example="Semua"
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Daftar lomba berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Daftar lomba berhasil diambil"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(type="object")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Role tidak diizinkan"),
+     *     @OA\Response(response=422, description="Parameter tidak valid")
+     * )
+     */
+
     // PB-03: Daftar lomba warga
     public function index(Request $request): JsonResponse
     {
@@ -75,6 +119,35 @@ class LombaController extends Controller
             'data' => $lomba,
         ]);
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/warga/lomba/{id}",
+     *     operationId="getDetailLombaWarga",
+     *     tags={"Warga - Lomba"},
+     *     summary="Mengambil detail lomba",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID lomba",
+     *         @OA\Schema(type="integer"),
+     *         example=1
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Detail lomba berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=404, description="Lomba tidak ditemukan")
+     * )
+     */
 
     // PB-03: Detail lomba warga
     public function show(int $id): JsonResponse

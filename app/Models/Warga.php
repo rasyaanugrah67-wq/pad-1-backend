@@ -39,4 +39,19 @@ class Warga extends Model
     {
         return $this->hasOne(Akun::class, 'id_warga', 'id_warga');
     }
+
+    public function pendaftaran()
+    {
+        return $this->hasMany(Pendaftaran::class, 'id_warga', 'id_warga');
+    }
+
+    public function iuran()
+    {
+        return $this->hasMany(Iuran::class, 'id_warga', 'id_warga');
+    }
+
+    public function notifikasi()
+    {
+        return $this->hasMany(Notifikasi::class, 'id_warga', 'id_warga');
+    }
 }

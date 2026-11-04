@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BerandaController;
 use App\Http\Controllers\Api\LombaController;
+use App\Http\Controllers\Api\PendaftaranController;
+use App\Http\Controllers\Api\IuranController;
+use App\Http\Controllers\Api\NotifikasiController;
+use App\Http\Controllers\Api\DashboardController;
 
 // ==============================
 // AUTHENTICATION
@@ -42,12 +46,10 @@ Route::middleware([
     'role:Admin',
 ])->prefix('admin')->group(function () {
 
-    Route::get('/dashboard', function () {
-        return response()->json([
-            'message' => 'Dashboard Admin'
-        ]);
-    });
-
+   Route::get('/dashboard', [
+    DashboardController::class,
+    'admin',
+    ]);
 });
 
 
@@ -60,12 +62,10 @@ Route::middleware([
     'role:Panitia',
 ])->prefix('panitia')->group(function () {
 
-    Route::get('/dashboard', function () {
-        return response()->json([
-            'message' => 'Dashboard Panitia'
-        ]);
-    });
-
+    Route::get('/dashboard', [
+    DashboardController::class,
+    'panitia',
+    ]);
 });
 
 
@@ -79,11 +79,10 @@ Route::middleware([
     'role:Warga',
 ])->prefix('warga')->group(function () {
 
-    Route::get('/dashboard', function () {
-        return response()->json([
-            'message' => 'Dashboard Warga'
-        ]);
-    });
+    Route::get('/dashboard', [
+    DashboardController::class,
+    'warga',
+    ]);
 
     // PB-02: Beranda Warga
     Route::get('/beranda', [
@@ -103,6 +102,54 @@ Route::middleware([
         LombaController::class,
         'show'
     ])->whereNumber('id');
+
+    // PB-04: Pendaftaran Lomba Warga
+    Route::get('/pendaftaran', [
+        PendaftaranController::class,
+        'index'
+    ]);
+
+    Route::post('/pendaftaran', [
+        PendaftaranController::class,
+        'store'
+    ]);
+
+    // PB-05: Iuran dan Pembayaran Warga
+    Route::get('/iuran', [
+        IuranController::class,
+        'index'
+    ]);
+
+    Route::get('/iuran/{id_iuran}', [
+        IuranController::class,
+        'show'
+    ])->whereNumber('id_iuran');
+
+    Route::post('/iuran/{id_iuran}/pembayaran', [
+        IuranController::class,
+        'bayar'
+    ])->whereNumber('id_iuran');
+
+    // PB-06: Notifikasi Warga
+    Route::get('/notifikasi', [
+        NotifikasiController::class,
+        'index'
+    ]);
+
+    Route::get('/notifikasi/unread-count', [
+        NotifikasiController::class,
+        'unreadCount'
+    ]);
+
+    Route::patch('/notifikasi/{id_notifikasi}/read', [
+        NotifikasiController::class,
+        'markAsRead'
+    ])->whereNumber('id_notifikasi');
+
+    Route::patch('/notifikasi/read-all', [
+        NotifikasiController::class,
+        'markAllAsRead'
+    ]);
 
 
 });

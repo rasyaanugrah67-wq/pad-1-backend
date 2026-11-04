@@ -1,0 +1,1687 @@
+﻿=== PAD BACKEND CODE AUDIT ===
+
+
+========================================
+FILE: routes/api.php
+========================================
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BerandaController;
+use App\Http\Controllers\Api\LombaController;
+use App\Http\Controllers\Api\PendaftaranController;
+use App\Http\Controllers\Api\IuranController;
+use App\Http\Controllers\Api\NotifikasiController;
+
+// ==============================
+// AUTHENTICATION
+// ==============================
+
+Route::prefix('auth')->group(function () {
+
+    // Login tidak membutuhkan token
+    Route::post('/login', [
+        AuthController::class,
+        'login'
+    ]);
+
+    // Harus sudah login
+    Route::middleware('auth:sanctum')->group(function () {
+
+        Route::post('/logout', [
+            AuthController::class,
+            'logout'
+        ]);
+
+        Route::get('/me', [
+            AuthController::class,
+            'me'
+        ]);
+    });
+});
+
+
+// ==============================
+// ADMIN
+// ==============================
+
+Route::middleware([
+    'auth:sanctum',
+    'role:Admin',
+])->prefix('admin')->group(function () {
+
+    Route::get('/dashboard', function () {
+        return response()->json([
+            'message' => 'Dashboard Admin'
+        ]);
+    });
+
+});
+
+
+// ==============================
+// PANITIA
+// ==============================
+
+Route::middleware([
+    'auth:sanctum',
+    'role:Panitia',
+])->prefix('panitia')->group(function () {
+
+    Route::get('/dashboard', function () {
+        return response()->json([
+            'message' => 'Dashboard Panitia'
+        ]);
+    });
+
+});
+
+
+
+ // ==============================
+ // WARGA
+ // ==============================
+
+Route::middleware([
+    'auth:sanctum',
+    'role:Warga',
+])->prefix('warga')->group(function () {
+
+    Route::get('/dashboard', function () {
+        return response()->json([
+            'message' => 'Dashboard Warga'
+        ]);
+    });
+
+    // PB-02: Beranda Warga
+    Route::get('/beranda', [
+        BerandaController::class,
+        'index'
+    ]);
+
+    
+    // PB-03: Daftar Lomba Warga
+    Route::get('/lomba', [
+        LombaController::class,
+        'index'
+    ]);
+
+    // PB-03: Detail Lomba Warga
+    Route::get('/lomba/{id}', [
+        LombaController::class,
+        'show'
+    ])->whereNumber('id');
+
+    // PB-04: Pendaftaran Lomba Warga
+    Route::get('/pendaftaran', [
+        PendaftaranController::class,
+        'index'
+    ]);
+
+    Route::post('/pendaftaran', [
+        PendaftaranController::class,
+        'store'
+    ]);
+
+    // PB-05: Iuran dan Pembayaran Warga
+    Route::get('/iuran', [
+        IuranController::class,
+        'index'
+    ]);
+
+    Route::get('/iuran/{id_iuran}', [
+        IuranController::class,
+        'show'
+    ])->whereNumber('id_iuran');
+
+    Route::post('/iuran/{id_iuran}/pembayaran', [
+        IuranController::class,
+        'bayar'
+    ])->whereNumber('id_iuran');
+
+    // PB-06: Notifikasi Warga
+    Route::get('/notifikasi', [
+        NotifikasiController::class,
+        'index'
+    ]);
+
+    Route::get('/notifikasi/unread-count', [
+        NotifikasiController::class,
+        'unreadCount'
+    ]);
+
+    Route::patch('/notifikasi/{id_notifikasi}/read', [
+        NotifikasiController::class,
+        'markAsRead'
+    ])->whereNumber('id_notifikasi');
+
+    Route::patch('/notifikasi/read-all', [
+        NotifikasiController::class,
+        'markAllAsRead'
+    ]);
+
+
+});
+
+
+// ==============================
+// ADMIN + PANITIA
+// ==============================
+
+Route::middleware([
+    'auth:sanctum',
+    'role:Admin,Panitia',
+])->group(function () {
+
+    Route::get('/lomba/manage', function () {
+        return response()->json([
+            'message' => 'Halaman ini dapat diakses Admin dan Panitia'
+        ]);
+    });
+
+});
+
+
+========================================
+FILE: app/Http/Middleware/CheckRole.php
+========================================
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class CheckRole
+{
+    public function handle(
+        Request $request,
+        Closure $next,
+        ...$roles
+    ): Response {
+
+        $akun = $request->user();
+
+        if (!$akun) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        if (!$akun->isActive()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak aktif.',
+            ], 403);
+        }
+
+        $roleName = strtolower(
+            $akun->role?->nama_role ?? ''
+        );
+
+        $allowedRoles = array_map(
+            'strtolower',
+            $roles
+        );
+
+        if (!in_array($roleName, $allowedRoles, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses ke resource ini.',
+            ], 403);
+        }
+
+        return $next($request);
+    }
+}
+
+
+========================================
+FILE: app/Http/Controllers/Api/PendaftaranController.php
+========================================
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\AnggotaPendaftaran;
+use App\Models\Lomba;
+use App\Models\Notifikasi;
+use App\Models\Pendaftaran;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+
+class PendaftaranController extends Controller
+{
+    /**
+     * PB-04: Mengambil riwayat pendaftaran milik warga yang sedang login (Individu & Beregu).
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $pendaftaran = Pendaftaran::with([
+            'lomba' => function ($query) {
+                $query->with([
+                    'kategori',
+                    'jadwal' => function ($q) {
+                        $q->orderBy('tanggal')->orderBy('waktu_mulai');
+                    },
+                ]);
+            },
+            'anggota',
+        ])
+            ->where('id_warga', $idWarga)
+            ->orderByDesc('tanggal_daftar')
+            ->orderByDesc('id_pendaftaran')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar riwayat pendaftaran lomba berhasil diambil.',
+            'data' => $pendaftaran,
+        ]);
+    }
+
+    /**
+     * PB-04: Mendaftar lomba (Mendukung Individu dan Regu/Tim berdasarkan data lomba di DB).
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        // 1. Validasi awal: id_lomba wajib integer
+        $initialValidator = Validator::make($request->all(), [
+            'id_lomba' => ['required', 'integer'],
+        ], [
+            'id_lomba.required' => 'ID lomba wajib diisi.',
+            'id_lomba.integer' => 'ID lomba harus berupa angka.',
+        ]);
+
+        if ($initialValidator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $initialValidator->errors()->first(),
+                'errors' => $initialValidator->errors(),
+            ], 422);
+        }
+
+        // 2. Ambil data lomba dari database dan periksa status
+        $lomba = Lomba::with('kategori')->find($request->id_lomba);
+
+        if (!$lomba) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lomba tidak ditemukan.',
+            ], 422);
+        }
+
+        if ($lomba->status !== 'Dibuka') {
+            return response()->json([
+                'success' => false,
+                'message' => "Pendaftaran tidak dapat dilakukan karena status lomba saat ini '{$lomba->status}'.",
+            ], 422);
+        }
+
+        // 3. Tentukan jenis pendaftaran berdasarkan data lomba di database
+        $isBeregu = $lomba->isBeregu()
+            || (strtolower($lomba->jenis_pendaftaran ?? '') === 'beregu')
+            || in_array($lomba->nama_lomba, ['Tarik Tambang', 'Futsal Sarung'], true);
+
+        // 4. Validasi berdasarkan jenis pendaftaran lomba
+        if ($isBeregu) {
+            // Lomba beregu WAJIB menyertakan nama_tim dan daftar anggota
+            $teamValidator = Validator::make($request->all(), [
+                'nama_tim' => ['required', 'string', 'min:2', 'max:100'],
+                'anggota' => ['required', 'array', 'min:1'],
+                'anggota.*.nama' => ['required', 'string', 'max:100'],
+                'anggota.*.no_hp' => [
+                    'required',
+                    'string',
+                    'max:20',
+                    'regex:/^(\+62|62|0)[0-9\-\s]{7,18}$/',
+                ],
+            ], [
+                'nama_tim.required' => 'Nama tim wajib diisi untuk lomba beregu.',
+                'nama_tim.string' => 'Nama tim harus berupa teks.',
+                'nama_tim.max' => 'Nama tim maksimal 100 karakter.',
+                'anggota.required' => 'Daftar anggota tim wajib diisi untuk lomba beregu.',
+                'anggota.array' => 'Daftar anggota harus berupa array.',
+                'anggota.min' => 'Daftar anggota tim minimal memiliki 1 anggota.',
+                'anggota.*.nama.required' => 'Nama setiap anggota tim wajib diisi.',
+                'anggota.*.nama.string' => 'Nama anggota harus berupa teks.',
+                'anggota.*.nama.max' => 'Nama anggota maksimal 100 karakter.',
+                'anggota.*.no_hp.required' => 'Nomor HP setiap anggota tim wajib diisi.',
+                'anggota.*.no_hp.regex' => 'Format nomor HP anggota tidak valid (contoh: 081234567890).',
+            ]);
+
+            if ($teamValidator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $teamValidator->errors()->first(),
+                    'errors' => $teamValidator->errors(),
+                ], 422);
+            }
+        } else {
+            // Lomba individu CUKUP id_lomba. Tolak jika mengirim field nama_tim atau anggota
+            $hasNamaTim = $request->filled('nama_tim');
+            $hasAnggota = $request->has('anggota') && !empty($request->input('anggota'));
+
+            if ($hasNamaTim || $hasAnggota) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lomba ini adalah lomba individu, tidak menerima data nama tim atau anggota.',
+                ], 422);
+            }
+        }
+
+        // 5. Cegah perwakilan mendaftar dua kali untuk lomba yang sama
+        $sudahTerdaftar = Pendaftaran::where('id_warga', $idWarga)
+            ->where('id_lomba', $lomba->id_lomba)
+            ->exists();
+
+        if ($sudahTerdaftar) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah terdaftar pada perlombaan ini.',
+            ], 409);
+        }
+
+        // 6. Simpan pendaftaran, anggota tim, dan notifikasi dalam satu DB Transaction
+        $namaTim = $isBeregu ? trim($request->input('nama_tim')) : null;
+        $anggotaList = $isBeregu ? $request->input('anggota', []) : [];
+
+        $pendaftaran = DB::transaction(function () use ($idWarga, $lomba, $isBeregu, $namaTim, $anggotaList) {
+            $p = Pendaftaran::create([
+                'id_warga' => $idWarga,
+                'id_lomba' => $lomba->id_lomba,
+                'nama_tim' => $namaTim,
+                'tanggal_daftar' => now(),
+                'status' => 'Menunggu',
+                'catatan' => null,
+            ]);
+
+            if ($isBeregu) {
+                foreach ($anggotaList as $item) {
+                    AnggotaPendaftaran::create([
+                        'id_pendaftaran' => $p->id_pendaftaran,
+                        'nama' => trim($item['nama']),
+                        'no_hp' => trim($item['no_hp']),
+                    ]);
+                }
+            }
+
+            // Notifikasi pendaftaran
+            $pesanNotif = $isBeregu
+                ? "Pendaftaran tim '{$namaTim}' untuk lomba '{$lomba->nama_lomba}' telah diajukan dan sedang menunggu verifikasi panitia."
+                : "Pendaftaran Anda untuk lomba '{$lomba->nama_lomba}' telah diajukan dan sedang menunggu verifikasi panitia.";
+
+            Notifikasi::create([
+                'id_warga' => $idWarga,
+                'judul' => 'Pendaftaran Lomba Berhasil Diajukan',
+                'pesan' => $pesanNotif,
+                'tipe' => 'Lomba',
+                'status_baca' => false,
+            ]);
+
+            return $p;
+        });
+
+        // 7. Load relasi lomba, kategori, jadwal, dan anggota
+        $pendaftaran->load([
+            'lomba' => function ($query) {
+                $query->with([
+                    'kategori',
+                    'jadwal' => function ($q) {
+                        $q->orderBy('tanggal')->orderBy('waktu_mulai');
+                    },
+                ]);
+            },
+            'anggota',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $isBeregu
+                ? "Pendaftaran tim '{$namaTim}' berhasil diajukan."
+                : 'Pendaftaran lomba berhasil diajukan.',
+            'data' => $pendaftaran,
+        ], 201);
+    }
+}
+
+
+
+========================================
+FILE: app/Http/Controllers/Api/IuranController.php
+========================================
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Iuran;
+use App\Models\Notifikasi;
+use App\Models\Pembayaran;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+
+class IuranController extends Controller
+{
+    /**
+     * PB-05: Mengambil daftar iuran milik warga yang sedang login.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'status' => [
+                'nullable',
+                Rule::in(['Semua', 'Belum Bayar', 'Sudah Bayar']),
+            ],
+        ]);
+
+        $status = $validated['status'] ?? 'Semua';
+
+        $query = Iuran::with([
+            'periode',
+            'pembayaran' => function ($q) {
+                $q->orderByDesc('created_at');
+            },
+        ])
+            ->where('id_warga', $idWarga);
+
+        if ($status === 'Belum Bayar') {
+            $query->where('status', 'Belum Bayar');
+        } elseif ($status === 'Sudah Bayar') {
+            $query->where('status', 'Sudah Bayar');
+        }
+
+        $iuran = $query
+            ->orderBy('jatuh_tempo')
+            ->orderByDesc('id_iuran')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar tagihan iuran berhasil diambil.',
+            'data' => $iuran,
+        ]);
+    }
+
+    /**
+     * PB-05: Mengambil detail satu iuran milik warga yang sedang login.
+     */
+    public function show(Request $request, int $id_iuran): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $iuran = Iuran::with([
+            'periode',
+            'pembayaran' => function ($q) {
+                $q->with(['verifikator' => function ($v) {
+                    $v->select('id_akun', 'username');
+                }])->orderByDesc('created_at');
+            },
+        ])
+            ->where('id_iuran', $id_iuran)
+            ->where('id_warga', $idWarga)
+            ->first();
+
+        if (!$iuran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data iuran tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail iuran berhasil diambil.',
+            'data' => $iuran,
+        ]);
+    }
+
+    /**
+     * PB-05: Mengajukan pembayaran untuk suatu tagihan iuran.
+     */
+    public function bayar(Request $request, int $id_iuran): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        // Cari iuran dan pastikan milik warga yang login
+        $iuran = Iuran::where('id_iuran', $id_iuran)
+            ->where('id_warga', $idWarga)
+            ->first();
+
+        if (!$iuran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data iuran tidak ditemukan.',
+            ], 404);
+        }
+
+        // Cek jika status iuran sudah lunas
+        if ($iuran->status === 'Sudah Bayar') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Iuran ini sudah lunas.',
+            ], 422);
+        }
+
+        // Cek apakah ada pengajuan pembayaran sebelumnya yang masih menunggu verifikasi
+        $menungguVerifikasi = Pembayaran::where('id_iuran', $iuran->id_iuran)
+            ->where('status_verifikasi', 'Menunggu')
+            ->exists();
+
+        if ($menungguVerifikasi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengajuan pembayaran sebelumnya masih menunggu verifikasi panitia.',
+            ], 409);
+        }
+
+        $request->validate([
+            'metode' => ['required', 'string', 'max:50'],
+            'nominal' => ['required', 'numeric', 'min:1'],
+            'bukti_bayar' => ['required', 'file', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+        ]);
+
+        // Pastikan nominal pembayaran sama dengan tagihan iuran
+        if (round((float) $request->nominal, 2) !== round((float) $iuran->nominal, 2)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nominal pembayaran harus sesuai dengan tagihan iuran (Rp ' . number_format($iuran->nominal, 0, ',', '.') . ').',
+            ], 422);
+        }
+
+        // Simpan file bukti bayar ke disk 'public'
+        $path = $request->file('bukti_bayar')->store('bukti_bayar', 'public');
+
+        $pembayaran = DB::transaction(function () use ($iuran, $request, $path, $idWarga) {
+            $p = Pembayaran::create([
+                'id_iuran' => $iuran->id_iuran,
+                'tanggal_bayar' => now(),
+                'nominal' => $iuran->nominal,
+                'metode' => $request->metode,
+                'bukti_bayar' => $path,
+                'status_verifikasi' => 'Menunggu',
+                'diverifikasi_oleh' => null,
+                'tanggal_verifikasi' => null,
+            ]);
+
+            Notifikasi::create([
+                'id_warga' => $idWarga,
+                'judul' => 'Pengajuan Pembayaran Iuran',
+                'pesan' => 'Pembayaran iuran sebesar Rp ' . number_format($iuran->nominal, 0, ',', '.') . ' berhasil diajukan dan sedang menunggu verifikasi panitia.',
+                'tipe' => 'Iuran',
+                'status_baca' => false,
+            ]);
+
+            return $p;
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pembayaran iuran berhasil diajukan dan sedang menunggu verifikasi panitia.',
+            'data' => $pembayaran,
+        ], 201);
+    }
+}
+
+
+
+
+========================================
+FILE: app/Http/Controllers/Api/NotifikasiController.php
+========================================
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Notifikasi;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class NotifikasiController extends Controller
+{
+    /**
+     * PB-06: Mengambil seluruh notifikasi milik warga yang login.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $query = Notifikasi::where('id_warga', $idWarga)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id_notifikasi');
+
+        if ($request->has('status_baca')) {
+            $statusBaca = filter_var($request->query('status_baca'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($statusBaca !== null) {
+                $query->where('status_baca', $statusBaca);
+            }
+        }
+
+        $notifikasi = $query->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar notifikasi berhasil diambil.',
+            'data' => $notifikasi,
+        ]);
+    }
+
+    /**
+     * PB-06: Mengambil jumlah notifikasi yang belum dibaca (unread count).
+     */
+    public function unreadCount(Request $request): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $unreadCount = Notifikasi::where('id_warga', $idWarga)
+            ->where('status_baca', false)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Jumlah notifikasi belum dibaca berhasil diambil.',
+            'data' => [
+                'unread_count' => $unreadCount,
+            ],
+        ]);
+    }
+
+    /**
+     * PB-06: Menandai satu notifikasi telah dibaca (idempotent).
+     */
+    public function markAsRead(Request $request, int $id_notifikasi): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $notifikasi = Notifikasi::where('id_notifikasi', $id_notifikasi)
+            ->where('id_warga', $idWarga)
+            ->first();
+
+        if (!$notifikasi) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Notifikasi tidak ditemukan.',
+            ], 404);
+        }
+
+        if (!$notifikasi->status_baca) {
+            $notifikasi->update([
+                'status_baca' => true,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notifikasi berhasil ditandai sudah dibaca.',
+            'data' => $notifikasi,
+        ]);
+    }
+
+    /**
+     * PB-06: Menandai semua notifikasi milik warga sebagai sudah dibaca.
+     */
+    public function markAllAsRead(Request $request): JsonResponse
+    {
+        $akun = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $affected = Notifikasi::where('id_warga', $idWarga)
+            ->where('status_baca', false)
+            ->update([
+                'status_baca' => true,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Semua notifikasi berhasil ditandai sudah dibaca.',
+            'data' => [
+                'updated_count' => $affected,
+            ],
+        ]);
+    }
+}
+
+
+
+
+========================================
+FILE: app/Models/Lomba.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
+class Lomba extends Model
+{
+    use HasFactory;
+
+    protected $table = 'lomba';
+    protected $primaryKey = 'id_lomba';
+
+    protected $fillable = [
+        'id_periode',
+        'id_kategori',
+        'nama_lomba',
+        'jenis_pendaftaran',
+        'deskripsi',
+        'gambar',
+        'status',
+    ];
+
+    public function isBeregu(): bool
+    {
+        return strtolower($this->jenis_pendaftaran ?? '') === 'beregu';
+    }
+
+    public function isIndividu(): bool
+    {
+        return strtolower($this->jenis_pendaftaran ?? '') === 'individu';
+    }
+
+    public function periode(): BelongsTo
+    {
+        return $this->belongsTo(Periode::class, 'id_periode', 'id_periode');
+    }
+
+    public function kategori(): BelongsTo
+    {
+        return $this->belongsTo(KategoriLomba::class, 'id_kategori', 'id_kategori');
+    }
+
+    public function detail(): HasOne
+    {
+        return $this->hasOne(DetailLomba::class, 'id_lomba', 'id_lomba');
+    }
+
+    public function jadwal(): HasMany
+    {
+        return $this->hasMany(JadwalLomba::class, 'id_lomba', 'id_lomba');
+    }
+
+    public function pendaftaran(): HasMany
+    {
+        return $this->hasMany(Pendaftaran::class, 'id_lomba', 'id_lomba');
+    }
+
+    public function dokumentasi(): HasMany
+    {
+        return $this->hasMany(Dokumentasi::class, 'id_lomba', 'id_lomba');
+    }
+}
+
+
+
+
+========================================
+FILE: app/Models/Pendaftaran.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Pendaftaran extends Model
+{
+    use HasFactory;
+
+    protected $table = 'pendaftaran';
+    protected $primaryKey = 'id_pendaftaran';
+
+    protected $fillable = [
+        'id_warga',
+        'id_lomba',
+        'nama_tim',
+        'tanggal_daftar',
+        'status',
+        'catatan',
+    ];
+
+    protected $casts = [
+        'tanggal_daftar' => 'datetime',
+    ];
+
+    public function warga(): BelongsTo
+    {
+        return $this->belongsTo(Warga::class, 'id_warga', 'id_warga');
+    }
+
+    public function lomba(): BelongsTo
+    {
+        return $this->belongsTo(Lomba::class, 'id_lomba', 'id_lomba');
+    }
+
+    public function anggota(): HasMany
+    {
+        return $this->hasMany(AnggotaPendaftaran::class, 'id_pendaftaran', 'id_pendaftaran');
+    }
+}
+
+
+
+
+========================================
+FILE: app/Models/AnggotaPendaftaran.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class AnggotaPendaftaran extends Model
+{
+    use HasFactory;
+
+    protected $table = 'anggota_pendaftaran';
+    protected $primaryKey = 'id_anggota';
+
+    protected $fillable = [
+        'id_pendaftaran',
+        'nama',
+        'no_hp',
+    ];
+
+    public function pendaftaran(): BelongsTo
+    {
+        return $this->belongsTo(Pendaftaran::class, 'id_pendaftaran', 'id_pendaftaran');
+    }
+}
+
+
+
+
+========================================
+FILE: app/Models/Pembayaran.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Pembayaran extends Model
+{
+    use HasFactory;
+
+    protected $table = 'pembayaran';
+    protected $primaryKey = 'id_pembayaran';
+
+    protected $fillable = [
+        'id_iuran',
+        'tanggal_bayar',
+        'nominal',
+        'metode',
+        'bukti_bayar',
+        'status_verifikasi',
+        'diverifikasi_oleh',
+        'tanggal_verifikasi',
+    ];
+
+    protected $casts = [
+        'tanggal_bayar' => 'datetime',
+        'tanggal_verifikasi' => 'datetime',
+        'nominal' => 'decimal:2',
+    ];
+
+    protected $appends = [
+        'bukti_bayar_url',
+    ];
+
+    public function getBuktiBayarUrlAttribute(): ?string
+    {
+        return $this->bukti_bayar ? asset('storage/' . $this->bukti_bayar) : null;
+    }
+
+    public function iuran(): BelongsTo
+    {
+        return $this->belongsTo(Iuran::class, 'id_iuran', 'id_iuran');
+    }
+
+    public function verifikator(): BelongsTo
+    {
+        return $this->belongsTo(Akun::class, 'diverifikasi_oleh', 'id_akun');
+    }
+}
+
+
+
+
+========================================
+FILE: app/Models/Iuran.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Iuran extends Model
+{
+    use HasFactory;
+
+    protected $table = 'iuran';
+    protected $primaryKey = 'id_iuran';
+
+    protected $fillable = [
+        'id_warga',
+        'id_periode',
+        'nominal',
+        'jatuh_tempo',
+        'status',
+    ];
+
+    protected $casts = [
+        'nominal' => 'decimal:2',
+        'jatuh_tempo' => 'date',
+    ];
+
+    public function warga(): BelongsTo
+    {
+        return $this->belongsTo(Warga::class, 'id_warga', 'id_warga');
+    }
+
+    public function periode(): BelongsTo
+    {
+        return $this->belongsTo(Periode::class, 'id_periode', 'id_periode');
+    }
+
+    public function pembayaran(): HasMany
+    {
+        return $this->hasMany(Pembayaran::class, 'id_iuran', 'id_iuran');
+    }
+}
+
+
+
+
+========================================
+FILE: app/Models/Notifikasi.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Notifikasi extends Model
+{
+    use HasFactory;
+
+    protected $table = 'notifikasi';
+    protected $primaryKey = 'id_notifikasi';
+
+    protected $fillable = [
+        'id_warga',
+        'judul',
+        'pesan',
+        'tipe',
+        'status_baca',
+    ];
+
+    protected $casts = [
+        'status_baca' => 'boolean',
+    ];
+
+    public function warga(): BelongsTo
+    {
+        return $this->belongsTo(Warga::class, 'id_warga', 'id_warga');
+    }
+}
+
+
+
+
+========================================
+FILE: app/Models/Warga.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Warga extends Model
+{
+    use HasFactory;
+
+    protected $table = 'warga';
+
+    protected $primaryKey = 'id_warga';
+
+    public $timestamps = false;
+
+    protected $fillable = [
+        'id_rt',
+        'nik',
+        'nama',
+        'no_hp',
+        'alamat',
+        'jenis_kelamin',
+        'tanggal_lahir',
+        'status',
+    ];
+
+    protected $casts = [
+        'tanggal_lahir' => 'date',
+    ];
+
+    public function rt()
+    {
+        return $this->belongsTo(Rt::class, 'id_rt', 'id_rt');
+    }
+
+    public function akun()
+    {
+        return $this->hasOne(Akun::class, 'id_warga', 'id_warga');
+    }
+
+    public function pendaftaran()
+    {
+        return $this->hasMany(Pendaftaran::class, 'id_warga', 'id_warga');
+    }
+
+    public function iuran()
+    {
+        return $this->hasMany(Iuran::class, 'id_warga', 'id_warga');
+    }
+
+    public function notifikasi()
+    {
+        return $this->hasMany(Notifikasi::class, 'id_warga', 'id_warga');
+    }
+}
+
+
+========================================
+FILE: app/Models/Akun.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Akun extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable;
+
+    protected $table = 'akun';
+
+    protected $primaryKey = 'id_akun';
+
+    public $timestamps = false;
+
+    protected $fillable = [
+        'id_warga',
+        'id_role',
+        'username',
+        'password',
+        'status',
+        'last_login',
+    ];
+
+    protected $hidden = [
+        'password',
+    ];
+
+    protected $casts = [
+        'last_login' => 'datetime',
+    ];
+
+    public function warga()
+    {
+        return $this->belongsTo(Warga::class, 'id_warga', 'id_warga');
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'id_role', 'id_role');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'Aktif';
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return strtolower($this->role?->nama_role ?? '') === strtolower($role);
+    }
+}
+
+
+========================================
+FILE: app/Models/KategoriLomba.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class KategoriLomba extends Model
+{
+    use HasFactory;
+
+    protected $table = 'kategori_lomba';
+    protected $primaryKey = 'id_kategori';
+
+    protected $fillable = [
+        'nama_kategori',
+        'deskripsi',
+    ];
+
+    public function lomba(): HasMany
+    {
+        return $this->hasMany(Lomba::class, 'id_kategori', 'id_kategori');
+    }
+}
+
+
+
+
+========================================
+FILE: app/Models/JadwalLomba.php
+========================================
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class JadwalLomba extends Model
+{
+    use HasFactory;
+
+    protected $table = 'jadwal_lomba';
+    protected $primaryKey = 'id_jadwal';
+
+    protected $fillable = [
+        'id_lomba',
+        'tanggal',
+        'waktu_mulai',
+        'waktu_selesai',
+        'lokasi',
+    ];
+
+    protected $casts = [
+        'tanggal' => 'date',
+    ];
+
+    public function lomba(): BelongsTo
+    {
+        return $this->belongsTo(Lomba::class, 'id_lomba', 'id_lomba');
+    }
+}
+
+
+
+
+========================================
+FILE: database/migrations/2026_10_29_204000_add_tim_dan_anggota_pendaftaran.php
+========================================
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // 1. Tambah kolom nama_tim pada tabel pendaftaran (nullable untuk pendaftaran individu)
+        Schema::table('pendaftaran', function (Blueprint $table) {
+            $table->string('nama_tim', 100)->nullable()->after('id_lomba');
+        });
+
+        // 2. Buat tabel anggota_pendaftaran untuk menyimpan daftar anggota tim
+        Schema::create('anggota_pendaftaran', function (Blueprint $table) {
+            $table->id('id_anggota');
+            $table->unsignedBigInteger('id_pendaftaran');
+            $table->string('nama', 100);
+            $table->string('no_hp', 20);
+            $table->timestamps();
+
+            $table->foreign('id_pendaftaran')
+                ->references('id_pendaftaran')
+                ->on('pendaftaran')
+                ->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('anggota_pendaftaran');
+
+        Schema::table('pendaftaran', function (Blueprint $table) {
+            $table->dropColumn('nama_tim');
+        });
+    }
+};
+
+
+
+
+========================================
+FILE: database/migrations/2026_10_29_210000_add_jenis_pendaftaran_to_lomba_table.php
+========================================
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('lomba', function (Blueprint $table) {
+            $table->string('jenis_pendaftaran', 30)
+                ->default('Individu')
+                ->after('nama_lomba');
+        });
+
+        // Perbarui data lomba yang sudah ada:
+        // Tarik Tambang dan Futsal Sarung menjadi Beregu.
+        // Mencakup nama yang sama pada periode berbeda jika memang ada.
+        DB::table('lomba')
+            ->whereIn('nama_lomba', ['Tarik Tambang', 'Futsal Sarung'])
+            ->update(['jenis_pendaftaran' => 'Beregu']);
+
+        DB::table('lomba')
+            ->whereNotIn('nama_lomba', ['Tarik Tambang', 'Futsal Sarung'])
+            ->update(['jenis_pendaftaran' => 'Individu']);
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('lomba', function (Blueprint $table) {
+            $table->dropColumn('jenis_pendaftaran');
+        });
+    }
+};
+
+
+
+
+========================================
+FILE: database/seeders/PB02Seeder.php
+========================================
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+
+class PB02Seeder extends Seeder
+{
+    public function run(): void
+    {
+        DB::transaction(function () {
+
+            // Menambahkan data baru atau memperbarui data lama.
+            // created_at hanya diisi saat data pertama kali dibuat.
+            $simpan = function (
+                string $tabel,
+                array $kunci,
+                array $nilai
+            ): void {
+                $query = DB::table($tabel)->where($kunci);
+
+                if ($query->exists()) {
+                    $query->update(array_merge(
+                        $nilai,
+                        ['updated_at' => now()]
+                    ));
+                } else {
+                    DB::table($tabel)->insert(array_merge(
+                        $kunci,
+                        $nilai,
+                        [
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    ));
+                }
+            };
+
+            // 1. Data periode HUT RI
+            $simpan(
+                'periode',
+                ['tahun' => 2026],
+                [
+                    'nama_kegiatan' => 'Semarak HUT RI ke-81',
+                    'deskripsi' => 'Nusantara Bersuka, Indonesia Berjaya',
+                    'status' => 'Aktif',
+                ]
+            );
+
+            $idPeriode = DB::table('periode')
+                ->where('tahun', 2026)
+                ->value('id_periode');
+
+            // 2. Data kategori lomba
+            $kategori = [
+                'Dewasa',
+                'Umum',
+                'Anak-anak',
+            ];
+
+            foreach ($kategori as $nama) {
+                $simpan(
+                    'kategori_lomba',
+                    ['nama_kategori' => $nama],
+                    []
+                );
+            }
+
+            // 3. Data lomba dan jadwal
+            $daftarLomba = [
+                [
+                    'nama' => 'Tarik Tambang',
+                    'kategori' => 'Dewasa',
+                    'jenis_pendaftaran' => 'Beregu',
+                    'tanggal' => '2026-08-15',
+                    'mulai' => '09:00:00',
+                    'selesai' => '11:00:00',
+                    'lokasi' => 'Lapangan Timur',
+                ],
+                [
+                    'nama' => 'Catur',
+                    'kategori' => 'Umum',
+                    'jenis_pendaftaran' => 'Individu',
+                    'tanggal' => '2026-08-15',
+                    'mulai' => '10:00:00',
+                    'selesai' => '12:00:00',
+                    'lokasi' => 'Balai Desa',
+                ],
+                [
+                    'nama' => 'Futsal Sarung',
+                    'kategori' => 'Dewasa',
+                    'jenis_pendaftaran' => 'Beregu',
+                    'tanggal' => '2026-08-16',
+                    'mulai' => '09:00:00',
+                    'selesai' => '11:30:00',
+                    'lokasi' => 'Lapangan Utara',
+                ],
+                [
+                    'nama' => 'Makan Kerupuk',
+                    'kategori' => 'Umum',
+                    'jenis_pendaftaran' => 'Individu',
+                    'tanggal' => '2026-08-16',
+                    'mulai' => '09:30:00',
+                    'selesai' => '11:00:00',
+                    'lokasi' => 'Depan Pendopo',
+                ],
+                [
+                    'nama' => 'Mewarnai',
+                    'kategori' => 'Anak-anak',
+                    'jenis_pendaftaran' => 'Individu',
+                    'tanggal' => '2026-08-16',
+                    'mulai' => '13:00:00',
+                    'selesai' => '15:00:00',
+                    'lokasi' => 'Aula Balai Desa',
+                ],
+            ];
+
+            foreach ($daftarLomba as $item) {
+
+                $idKategori = DB::table('kategori_lomba')
+                    ->where('nama_kategori', $item['kategori'])
+                    ->value('id_kategori');
+
+                // Simpan data lomba
+                $simpan(
+                    'lomba',
+                    [
+                        'id_periode' => $idPeriode,
+                        'nama_lomba' => $item['nama'],
+                    ],
+                    [
+                        'id_kategori' => $idKategori,
+                        'jenis_pendaftaran' => $item['jenis_pendaftaran'],
+                        'deskripsi' => 'Perlombaan dalam rangka HUT RI ke-81.',
+                        'status' => 'Dibuka',
+                    ]
+                );
+
+                $idLomba = DB::table('lomba')
+                    ->where('id_periode', $idPeriode)
+                    ->where('nama_lomba', $item['nama'])
+                    ->value('id_lomba');
+
+                // Simpan jadwal lomba
+                $simpan(
+                    'jadwal_lomba',
+                    [
+                        'id_lomba' => $idLomba,
+                        'tanggal' => $item['tanggal'],
+                    ],
+                    [
+                        'waktu_mulai' => $item['mulai'],
+                        'waktu_selesai' => $item['selesai'],
+                        'lokasi' => $item['lokasi'],
+                    ]
+                );
+            }
+
+        });
+
+        $this->command?->info(
+            'Data PB-02 berhasil disiapkan.'
+        );
+    }
+}
+
+
+
+========================================
+FILE: database/seeders/WargaDemoSeeder.php
+========================================
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use RuntimeException;
+
+class WargaDemoSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $username = env('DEMO_WARGA_USERNAME');
+        $password = env('DEMO_WARGA_PASSWORD');
+
+        if (!$username || !$password || strlen($password) < 12) {
+            throw new RuntimeException(
+                'DEMO_WARGA_USERNAME dan DEMO_WARGA_PASSWORD (minimal 12 karakter) wajib diatur.'
+            );
+        }
+
+        if ($username === 'admin') {
+            throw new RuntimeException(
+                'Username demo tidak boleh menggunakan akun admin.'
+            );
+        }
+
+        DB::transaction(function () use ($username, $password) {
+
+            $idRole = DB::table('role')
+                ->where('nama_role', 'Warga')
+                ->value('id_role');
+
+            $idRt = DB::table('rt')
+                ->where('nama_rt', 'RT 01')
+                ->value('id_rt');
+
+            if (!$idRole || !$idRt) {
+                throw new RuntimeException(
+                    'Role Warga atau RT 01 belum tersedia.'
+                );
+            }
+
+            if (DB::table('akun')->where('username', $username)->exists()) {
+                throw new RuntimeException(
+                    'Username sudah digunakan. Seeder tidak akan mengubah akun yang ada.'
+                );
+            }
+
+            $idWarga = DB::table('warga')->insertGetId([
+                'id_rt' => $idRt,
+                'nik' => null,
+                'nama' => 'Warga Demo PAD',
+                'no_hp' => null,
+                'alamat' => 'RT 01',
+                'jenis_kelamin' => 'L',
+                'tanggal_lahir' => null,
+                'status' => 'Aktif',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('akun')->insert([
+                'id_warga' => $idWarga,
+                'id_role' => $idRole,
+                'username' => $username,
+                'password' => Hash::make($password),
+                'status' => 'Aktif',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        $this->command?->info('Akun Warga demo berhasil dibuat.');
+    }
+}
+

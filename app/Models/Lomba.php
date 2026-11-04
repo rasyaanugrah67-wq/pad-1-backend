@@ -19,10 +19,21 @@ class Lomba extends Model
         'id_periode',
         'id_kategori',
         'nama_lomba',
+        'jenis_pendaftaran',
         'deskripsi',
         'gambar',
         'status',
     ];
+
+    public function isBeregu(): bool
+    {
+        return strtolower($this->jenis_pendaftaran ?? '') === 'beregu';
+    }
+
+    public function isIndividu(): bool
+    {
+        return strtolower($this->jenis_pendaftaran ?? '') === 'individu';
+    }
 
     public function periode(): BelongsTo
     {
