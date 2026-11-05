@@ -20,6 +20,8 @@ class Lomba extends Model
         'id_kategori',
         'nama_lomba',
         'jenis_pendaftaran',
+        'kapasitas_peserta',
+        'batas_anggota_tim',
         'deskripsi',
         'gambar',
         'status',

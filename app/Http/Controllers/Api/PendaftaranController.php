@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\TimLomba;
 use App\Models\AnggotaPendaftaran;
 use App\Models\Lomba;
 use App\Models\Notifikasi;
@@ -125,6 +126,7 @@ class PendaftaranController extends Controller
      *     @OA\Response(response=422, description="Unprocessable Entity - Validasi gagal, lomba tidak ditemukan, lomba ditutup, atau format data tim tidak sesuai")
      * )
      */
+    
     public function store(Request $request): JsonResponse
     {
         $akun = $request->user();
@@ -137,162 +139,332 @@ class PendaftaranController extends Controller
             ], 403);
         }
 
-        // 1. Validasi awal: id_lomba wajib integer
-        $initialValidator = Validator::make($request->all(), [
-            'id_lomba' => ['required', 'integer'],
+        $validator = Validator::make($request->all(), [
+            'id_lomba' => ['required', 'integer', 'exists:lomba,id_lomba'],
         ], [
             'id_lomba.required' => 'ID lomba wajib diisi.',
             'id_lomba.integer' => 'ID lomba harus berupa angka.',
+            'id_lomba.exists' => 'Lomba tidak ditemukan.',
         ]);
 
-        if ($initialValidator->fails()) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => $initialValidator->errors()->first(),
-                'errors' => $initialValidator->errors(),
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
             ], 422);
         }
 
-        // 2. Ambil data lomba dari database dan periksa status
-        $lomba = Lomba::with('kategori')->find($request->id_lomba);
+        try {
+            $hasil = DB::transaction(function () use ($request, $idWarga) {
 
-        if (!$lomba) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Lomba tidak ditemukan.',
-            ], 422);
-        }
+                // Kunci data lomba agar kuota tidak terlewati
+                // jika beberapa warga mendaftar bersamaan.
+                $lomba = Lomba::where('id_lomba', $request->id_lomba)
+                    ->lockForUpdate()
+                    ->first();
 
-        if ($lomba->status !== 'Dibuka') {
-            return response()->json([
-                'success' => false,
-                'message' => "Pendaftaran tidak dapat dilakukan karena status lomba saat ini '{$lomba->status}'.",
-            ], 422);
-        }
-
-        // 3. Tentukan jenis pendaftaran berdasarkan data lomba di database
-        $isBeregu = $lomba->isBeregu()
-            || (strtolower($lomba->jenis_pendaftaran ?? '') === 'beregu')
-            || in_array($lomba->nama_lomba, ['Tarik Tambang', 'Futsal Sarung'], true);
-
-        // 4. Validasi berdasarkan jenis pendaftaran lomba
-        if ($isBeregu) {
-            // Lomba beregu WAJIB menyertakan nama_tim dan daftar anggota
-            $teamValidator = Validator::make($request->all(), [
-                'nama_tim' => ['required', 'string', 'min:2', 'max:100'],
-                'anggota' => ['required', 'array', 'min:1'],
-                'anggota.*.nama' => ['required', 'string', 'max:100'],
-                'anggota.*.no_hp' => [
-                    'required',
-                    'string',
-                    'max:20',
-                    'regex:/^(\+62|62|0)[0-9\-\s]{7,18}$/',
-                ],
-            ], [
-                'nama_tim.required' => 'Nama tim wajib diisi untuk lomba beregu.',
-                'nama_tim.string' => 'Nama tim harus berupa teks.',
-                'nama_tim.max' => 'Nama tim maksimal 100 karakter.',
-                'anggota.required' => 'Daftar anggota tim wajib diisi untuk lomba beregu.',
-                'anggota.array' => 'Daftar anggota harus berupa array.',
-                'anggota.min' => 'Daftar anggota tim minimal memiliki 1 anggota.',
-                'anggota.*.nama.required' => 'Nama setiap anggota tim wajib diisi.',
-                'anggota.*.nama.string' => 'Nama anggota harus berupa teks.',
-                'anggota.*.nama.max' => 'Nama anggota maksimal 100 karakter.',
-                'anggota.*.no_hp.required' => 'Nomor HP setiap anggota tim wajib diisi.',
-                'anggota.*.no_hp.regex' => 'Format nomor HP anggota tidak valid (contoh: 081234567890).',
-            ]);
-
-            if ($teamValidator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $teamValidator->errors()->first(),
-                    'errors' => $teamValidator->errors(),
-                ], 422);
-            }
-        } else {
-            // Lomba individu CUKUP id_lomba. Tolak jika mengirim field nama_tim atau anggota
-            $hasNamaTim = $request->filled('nama_tim');
-            $hasAnggota = $request->has('anggota') && !empty($request->input('anggota'));
-
-            if ($hasNamaTim || $hasAnggota) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Lomba ini adalah lomba individu, tidak menerima data nama tim atau anggota.',
-                ], 422);
-            }
-        }
-
-        // 5. Cegah perwakilan mendaftar dua kali untuk lomba yang sama
-        $sudahTerdaftar = Pendaftaran::where('id_warga', $idWarga)
-            ->where('id_lomba', $lomba->id_lomba)
-            ->exists();
-
-        if ($sudahTerdaftar) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda sudah terdaftar pada perlombaan ini.',
-            ], 409);
-        }
-
-        // 6. Simpan pendaftaran, anggota tim, dan notifikasi dalam satu DB Transaction
-        $namaTim = $isBeregu ? trim($request->input('nama_tim')) : null;
-        $anggotaList = $isBeregu ? $request->input('anggota', []) : [];
-
-        $pendaftaran = DB::transaction(function () use ($idWarga, $lomba, $isBeregu, $namaTim, $anggotaList) {
-            $p = Pendaftaran::create([
-                'id_warga' => $idWarga,
-                'id_lomba' => $lomba->id_lomba,
-                'nama_tim' => $namaTim,
-                'tanggal_daftar' => now(),
-                'status' => 'Menunggu',
-                'catatan' => null,
-            ]);
-
-            if ($isBeregu) {
-                foreach ($anggotaList as $item) {
-                    AnggotaPendaftaran::create([
-                        'id_pendaftaran' => $p->id_pendaftaran,
-                        'nama' => trim($item['nama']),
-                        'no_hp' => trim($item['no_hp']),
-                    ]);
+                if (!$lomba || $lomba->status !== 'Dibuka') {
+                    return [
+                        'error' => 'Lomba tidak ditemukan atau pendaftarannya sudah ditutup.',
+                        'http_status' => 422,
+                    ];
                 }
+
+                $isBeregu = $lomba->isBeregu()
+                    || strtolower(trim($lomba->jenis_pendaftaran ?? '')) === 'beregu';
+
+                // Warga tidak boleh mendaftar dua kali pada lomba yang sama.
+                $sudahTerdaftar = Pendaftaran::where('id_warga', $idWarga)
+                    ->where('id_lomba', $lomba->id_lomba)
+                    ->exists();
+
+                if ($sudahTerdaftar) {
+                    return [
+                        'error' => 'Anda sudah terdaftar pada perlombaan ini.',
+                        'http_status' => 409,
+                    ];
+                }
+
+                // ==========================================
+                // PENDAFTARAN LOMBA INDIVIDU
+                // ==========================================
+                if (!$isBeregu) {
+
+                    $jumlahPendaftar = Pendaftaran::where(
+                        'id_lomba',
+                        $lomba->id_lomba
+                    )
+                        ->whereIn('status', ['Menunggu', 'Diterima'])
+                        ->count();
+
+                    if (
+                        $lomba->kapasitas_peserta !== null &&
+                        $jumlahPendaftar >= $lomba->kapasitas_peserta
+                    ) {
+                        return [
+                            'error' => 'Mohon maaf, kuota peserta lomba sudah penuh.',
+                            'http_status' => 422,
+                        ];
+                    }
+
+                    $pendaftaran = Pendaftaran::create([
+                        'id_warga' => $idWarga,
+                        'id_lomba' => $lomba->id_lomba,
+                        'id_tim' => null,
+                        'nama_tim' => null,
+                        'tanggal_daftar' => now(),
+                        'status' => 'Menunggu',
+                        'catatan' => null,
+                    ]);
+
+                    Notifikasi::create([
+                        'id_warga' => $idWarga,
+                        'judul' => 'Pendaftaran Lomba Berhasil Diajukan',
+                        'pesan' => "Pendaftaran Anda untuk lomba '{$lomba->nama_lomba}' berhasil diajukan dan sedang menunggu verifikasi panitia.",
+                        'tipe' => 'Lomba',
+                        'status_baca' => false,
+                    ]);
+
+                    $jumlahPendaftar++;
+
+                    return [
+                        'pendaftaran' => $pendaftaran,
+                        'is_beregu' => false,
+                        'kuota' => [
+                            'jumlah_pendaftar' => $jumlahPendaftar,
+                            'kapasitas_peserta' => $lomba->kapasitas_peserta,
+                            'sisa_kapasitas' => $lomba->kapasitas_peserta !== null
+                                ? max(0, $lomba->kapasitas_peserta - $jumlahPendaftar)
+                                : null,
+                            'kuota_penuh' => $lomba->kapasitas_peserta !== null
+                                ? $jumlahPendaftar >= $lomba->kapasitas_peserta
+                                : false,
+                            'pendaftaran_dibuka' => $lomba->kapasitas_peserta === null
+                                || $jumlahPendaftar < $lomba->kapasitas_peserta,
+                        ],
+                    ];
+                }
+
+                // ==========================================
+                // PENDAFTARAN LOMBA BEREGU
+                // ==========================================
+
+                $kapasitasTim = (int) $lomba->kapasitas_peserta;
+                $batasAnggota = (int) $lomba->batas_anggota_tim;
+
+                // Kapasitas dan batas anggota wajib diatur Admin/Panitia.
+                if ($kapasitasTim <= 0 || $batasAnggota <= 0) {
+                    return [
+                        'error' => 'Kapasitas tim dan batas anggota tim belum diatur. Silakan hubungi panitia.',
+                        'http_status' => 422,
+                    ];
+                }
+
+                // Pendaftaran beregu baru dilakukan per orang.
+                // Tidak lagi menggunakan nama_tim atau anggota[] dari warga.
+                if (
+                    $request->filled('nama_tim') ||
+                    ($request->has('anggota') && !empty($request->input('anggota')))
+                ) {
+                    return [
+                        'error' => 'Pendaftaran beregu dilakukan secara individu. Cukup kirim id_lomba tanpa nama_tim dan anggota.',
+                        'http_status' => 422,
+                    ];
+                }
+
+                // Tim lama yang belum dipindahkan ke tabel tim_lomba
+                // tetap dihitung sebagai tim yang memakai kapasitas.
+                $jumlahTimLama = Pendaftaran::where(
+                    'id_lomba',
+                    $lomba->id_lomba
+                )
+                    ->whereIn('status', ['Menunggu', 'Diterima'])
+                    ->whereNotNull('nama_tim')
+                    ->whereNull('id_tim')
+                    ->count();
+
+                // Tim yang sudah dibentuk otomatis.
+                $jumlahTimOtomatis = TimLomba::where(
+                    'id_lomba',
+                    $lomba->id_lomba
+                )->count();
+
+                // Peserta baru yang belum mendapatkan tim.
+                $jumlahMenungguTim = Pendaftaran::where(
+                    'id_lomba',
+                    $lomba->id_lomba
+                )
+                    ->whereIn('status', ['Menunggu', 'Diterima'])
+                    ->whereNull('id_tim')
+                    ->whereNull('nama_tim')
+                    ->count();
+
+                // Periksa apakah peserta baru masih bisa ditampung.
+                // Sisa peserta harus bisa membentuk tim dalam kapasitas yang tersedia.
+                $slotTimDibutuhkan = (int) ceil(
+                    ($jumlahMenungguTim + 1) / $batasAnggota
+                );
+
+                if (
+                    $jumlahTimLama +
+                    $jumlahTimOtomatis +
+                    $slotTimDibutuhkan > $kapasitasTim
+                ) {
+                    return [
+                        'error' => 'Mohon maaf, kapasitas seluruh tim untuk lomba ini sudah penuh.',
+                        'http_status' => 422,
+                    ];
+                }
+
+                // Simpan satu pendaftaran untuk satu warga.
+                $pendaftaran = Pendaftaran::create([
+                    'id_warga' => $idWarga,
+                    'id_lomba' => $lomba->id_lomba,
+                    'id_tim' => null,
+                    'nama_tim' => null,
+                    'tanggal_daftar' => now(),
+                    'status' => 'Menunggu',
+                    'catatan' => null,
+                ]);
+
+                // Ambil seluruh peserta aktif yang belum memiliki tim.
+                $pesertaMenunggu = Pendaftaran::where(
+                    'id_lomba',
+                    $lomba->id_lomba
+                )
+                    ->whereIn('status', ['Menunggu', 'Diterima'])
+                    ->whereNull('id_tim')
+                    ->whereNull('nama_tim')
+                    ->orderBy('tanggal_daftar')
+                    ->orderBy('id_pendaftaran')
+                    ->get()
+                    ->all();
+
+                // Bentuk tim setiap kali jumlah peserta mencukupi.
+                $jumlahTimTerbentuk = 0;
+
+                while (
+                    count($pesertaMenunggu) >= $batasAnggota &&
+                    ($jumlahTimLama + $jumlahTimOtomatis + $jumlahTimTerbentuk)
+                        < $kapasitasTim
+                ) {
+                    // Acak urutan peserta.
+                    shuffle($pesertaMenunggu);
+
+                    // Ambil peserta sesuai batas anggota per tim.
+                    $anggotaTim = array_splice(
+                        $pesertaMenunggu,
+                        0,
+                        $batasAnggota
+                    );
+
+                    $nomorTim = $jumlahTimLama
+                        + $jumlahTimOtomatis
+                        + $jumlahTimTerbentuk
+                        + 1;
+
+                    // Buat tim baru.
+                    $tim = TimLomba::create([
+                        'id_lomba' => $lomba->id_lomba,
+                        'nama_tim' => 'Tim ' . $nomorTim,
+                    ]);
+
+                    // Hubungkan setiap peserta dengan tim yang terbentuk.
+                    foreach ($anggotaTim as $peserta) {
+                        $peserta->update([
+                            'id_tim' => $tim->id_tim,
+                        ]);
+                    }
+
+                    $jumlahTimTerbentuk++;
+                }
+
+                // Notifikasi pendaftaran.
+                Notifikasi::create([
+                    'id_warga' => $idWarga,
+                    'judul' => 'Pendaftaran Lomba Berhasil Diajukan',
+                    'pesan' => "Pendaftaran Anda untuk lomba '{$lomba->nama_lomba}' berhasil diajukan. Sistem akan mengacak dan membentuk tim ketika jumlah peserta mencukupi.",
+                    'tipe' => 'Lomba',
+                    'status_baca' => false,
+                ]);
+
+                // Hitung kembali kondisi kuota setelah pembentukan tim.
+                $jumlahTim = $jumlahTimLama
+                    + $jumlahTimOtomatis
+                    + $jumlahTimTerbentuk;
+
+                $jumlahMenungguTim = count($pesertaMenunggu);
+
+                $jumlahPeserta = Pendaftaran::where(
+                    'id_lomba',
+                    $lomba->id_lomba
+                )
+                    ->whereIn('status', ['Menunggu', 'Diterima'])
+                    ->count()
+                    + AnggotaPendaftaran::whereHas('pendaftaran', function ($query) use ($lomba) {
+                        $query->where('id_lomba', $lomba->id_lomba)
+                            ->whereIn('status', ['Menunggu', 'Diterima'])
+                            ->whereNotNull('nama_tim')
+                            ->whereNull('id_tim');
+                    })->count();
+
+                $sisaKapasitas = max(
+                    0,
+                    (($kapasitasTim - $jumlahTim) * $batasAnggota)
+                        - $jumlahMenungguTim
+                );
+
+                return [
+                    'pendaftaran' => $pendaftaran,
+                    'is_beregu' => true,
+                    'kuota' => [
+                        'jumlah_peserta' => $jumlahPeserta,
+                        'jumlah_tim' => $jumlahTim,
+                        'kapasitas_tim' => $kapasitasTim,
+                        'batas_anggota_tim' => $batasAnggota,
+                        'peserta_menunggu_tim' => $jumlahMenungguTim,
+                        'sisa_kapasitas' => $sisaKapasitas,
+                        'kuota_penuh' => $sisaKapasitas <= 0,
+                        'pendaftaran_dibuka' => $sisaKapasitas > 0,
+                    ],
+                ];
+            });
+
+            if (isset($hasil['error'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $hasil['error'],
+                ], $hasil['http_status']);
             }
 
-            // Notifikasi pendaftaran
-            $pesanNotif = $isBeregu
-                ? "Pendaftaran tim '{$namaTim}' untuk lomba '{$lomba->nama_lomba}' telah diajukan dan sedang menunggu verifikasi panitia."
-                : "Pendaftaran Anda untuk lomba '{$lomba->nama_lomba}' telah diajukan dan sedang menunggu verifikasi panitia.";
+            $pendaftaran = $hasil['pendaftaran'];
 
-            Notifikasi::create([
-                'id_warga' => $idWarga,
-                'judul' => 'Pendaftaran Lomba Berhasil Diajukan',
-                'pesan' => $pesanNotif,
-                'tipe' => 'Lomba',
-                'status_baca' => false,
+            // Muat data lomba, kategori, jadwal, dan tim.
+            $pendaftaran->load([
+                'lomba.kategori',
+                'lomba.jadwal',
+                'anggota',
+                'tim.pendaftaran.warga',
             ]);
 
-            return $p;
-        });
+            return response()->json([
+                'success' => true,
+                'message' => $hasil['is_beregu']
+                    ? 'Pendaftaran berhasil. Sistem akan membentuk tim secara otomatis ketika jumlah peserta mencukupi.'
+                    : 'Pendaftaran lomba berhasil diajukan.',
+                'data' => $pendaftaran,
+                'kuota' => $hasil['kuota'],
+            ], 201);
 
-        // 7. Load relasi lomba, kategori, jadwal, dan anggota
-        $pendaftaran->load([
-            'lomba' => function ($query) {
-                $query->with([
-                    'kategori',
-                    'jadwal' => function ($q) {
-                        $q->orderBy('tanggal')->orderBy('waktu_mulai');
-                    },
-                ]);
-            },
-            'anggota',
-        ]);
+        } catch (\Throwable $e) {
+            report($e);
 
-        return response()->json([
-            'success' => true,
-            'message' => $isBeregu
-                ? "Pendaftaran tim '{$namaTim}' berhasil diajukan."
-                : 'Pendaftaran lomba berhasil diajukan.',
-            'data' => $pendaftaran,
-        ], 201);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memproses pendaftaran lomba.',
+            ], 500);
+        }
     }
+
 }
