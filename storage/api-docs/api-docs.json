@@ -672,7 +672,7 @@
                     "Warga - Lomba"
                 ],
                 "summary": "Mengambil daftar lomba",
-                "description": "Mengambil daftar lomba pada periode aktif, dengan pencarian dan filter status.",
+                "description": "Mengambil daftar lomba pada periode aktif dengan pencarian dan filter status.",
                 "operationId": "getDaftarLombaWarga",
                 "parameters": [
                     {
@@ -714,8 +714,7 @@
                                             "example": true
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "example": "Daftar lomba berhasil diambil"
+                                            "type": "string"
                                         },
                                         "data": {
                                             "type": "array",
@@ -790,6 +789,9 @@
                     },
                     "401": {
                         "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Role tidak diizinkan"
                     },
                     "404": {
                         "description": "Lomba tidak ditemukan"
@@ -1163,6 +1165,564 @@
                     }
                 ]
             }
+        },
+        "/api/admin/rt": {
+            "get": {
+                "tags": [
+                    "Admin - Data RT"
+                ],
+                "summary": "Menampilkan daftar RT",
+                "operationId": "b4e545f644bfee1c723d2fcbe6bb12cc",
+                "responses": {
+                    "200": {
+                        "description": "Daftar RT berhasil ditampilkan"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Admin - Data RT"
+                ],
+                "summary": "Menambahkan data RT",
+                "operationId": "ee03d8f6abf5f3c93c9be57855e8bfc9",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_rw",
+                                    "nomor_rt"
+                                ],
+                                "properties": {
+                                    "id_rw": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nomor_rt": {
+                                        "type": "string",
+                                        "example": "001"
+                                    },
+                                    "nama_rt": {
+                                        "type": "string",
+                                        "example": "RT 001"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "RT berhasil ditambahkan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                }
+            }
+        },
+        "/api/admin/rt/{rt}": {
+            "get": {
+                "tags": [
+                    "Admin - Data RT"
+                ],
+                "summary": "Menampilkan detail RT",
+                "operationId": "fb611ec917d136830259b18917a1e784",
+                "parameters": [
+                    {
+                        "name": "rt",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail RT berhasil ditampilkan"
+                    },
+                    "404": {
+                        "description": "RT tidak ditemukan"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Admin - Data RT"
+                ],
+                "summary": "Mengubah data RT",
+                "operationId": "4271c1614764195ebfab07a6ec900f25",
+                "parameters": [
+                    {
+                        "name": "rt",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "id_rw": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nomor_rt": {
+                                        "type": "string",
+                                        "example": "002"
+                                    },
+                                    "nama_rt": {
+                                        "type": "string",
+                                        "example": "RT 002"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Data RT berhasil diubah"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Data RT"
+                ],
+                "summary": "Menghapus data RT",
+                "operationId": "85f74c5e87fbceae0537edeec2102fde",
+                "parameters": [
+                    {
+                        "name": "rt",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RT berhasil dihapus"
+                    },
+                    "409": {
+                        "description": "RT masih memiliki warga"
+                    }
+                }
+            }
+        },
+        "/api/admin/rw": {
+            "get": {
+                "tags": [
+                    "Admin - Data RW"
+                ],
+                "summary": "Menampilkan daftar RW",
+                "operationId": "aa79351688fb0101001dd5cda12f0a45",
+                "responses": {
+                    "200": {
+                        "description": "Daftar RW berhasil ditampilkan"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Admin - Data RW"
+                ],
+                "summary": "Menambahkan data RW",
+                "operationId": "2b1fdad099f41afceff9ec982c52dbd0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nomor_rw"
+                                ],
+                                "properties": {
+                                    "nomor_rw": {
+                                        "type": "string",
+                                        "example": "001"
+                                    },
+                                    "nama_rw": {
+                                        "type": "string",
+                                        "example": "RW 001"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "RW berhasil ditambahkan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                }
+            }
+        },
+        "/api/admin/rw/{rw}": {
+            "get": {
+                "tags": [
+                    "Admin - Data RW"
+                ],
+                "summary": "Menampilkan detail RW",
+                "operationId": "19c551a1ee4476771cd7d2c1f14493e9",
+                "parameters": [
+                    {
+                        "name": "rw",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail RW berhasil ditampilkan"
+                    },
+                    "404": {
+                        "description": "RW tidak ditemukan"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Admin - Data RW"
+                ],
+                "summary": "Mengubah data RW",
+                "operationId": "ab195b4ffac0339e1c09b686b3296274",
+                "parameters": [
+                    {
+                        "name": "rw",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nomor_rw": {
+                                        "type": "string",
+                                        "example": "002"
+                                    },
+                                    "nama_rw": {
+                                        "type": "string",
+                                        "example": "RW 002"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Data RW berhasil diubah"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Data RW"
+                ],
+                "summary": "Menghapus data RW",
+                "operationId": "27917af69a158cb4895e78f7477a589f",
+                "parameters": [
+                    {
+                        "name": "rw",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RW berhasil dihapus"
+                    },
+                    "409": {
+                        "description": "RW masih memiliki RT"
+                    }
+                }
+            }
+        },
+        "/api/admin/warga": {
+            "get": {
+                "tags": [
+                    "Admin - Data Warga"
+                ],
+                "summary": "Menampilkan daftar warga",
+                "operationId": "e8909986f80b640ba3f5fb1f9c36ffe1",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id_rt",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Aktif",
+                                "Nonaktif"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar warga berhasil ditampilkan"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki akses"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Admin - Data Warga"
+                ],
+                "summary": "Menambahkan data warga",
+                "operationId": "915a79ecfbfcdd9d4f318f0a2e7e3182",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_rt",
+                                    "nik",
+                                    "nama",
+                                    "jenis_kelamin"
+                                ],
+                                "properties": {
+                                    "id_rt": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nik": {
+                                        "type": "string",
+                                        "example": "3276010101900001"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Budi Santoso"
+                                    },
+                                    "no_hp": {
+                                        "type": "string",
+                                        "example": "081234567890"
+                                    },
+                                    "alamat": {
+                                        "type": "string",
+                                        "example": "Jalan Melati"
+                                    },
+                                    "jenis_kelamin": {
+                                        "type": "string",
+                                        "enum": [
+                                            "L",
+                                            "P"
+                                        ],
+                                        "example": "L"
+                                    },
+                                    "tanggal_lahir": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1990-01-01"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Aktif",
+                                            "Nonaktif"
+                                        ],
+                                        "example": "Aktif"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Warga berhasil ditambahkan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                }
+            }
+        },
+        "/api/admin/warga/{warga}": {
+            "get": {
+                "tags": [
+                    "Admin - Data Warga"
+                ],
+                "summary": "Menampilkan detail warga",
+                "operationId": "701b3ac3d710323074e0088ed2d4f1fc",
+                "parameters": [
+                    {
+                        "name": "warga",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail warga berhasil ditampilkan"
+                    },
+                    "404": {
+                        "description": "Warga tidak ditemukan"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Admin - Data Warga"
+                ],
+                "summary": "Mengubah data warga",
+                "operationId": "7eb77f2ba23df326b3a28c27d8a15315",
+                "parameters": [
+                    {
+                        "name": "warga",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "id_rt": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nik": {
+                                        "type": "string",
+                                        "example": "3276010101900001"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Budi Santoso"
+                                    },
+                                    "no_hp": {
+                                        "type": "string",
+                                        "example": "081234567890"
+                                    },
+                                    "alamat": {
+                                        "type": "string",
+                                        "example": "Jalan Melati"
+                                    },
+                                    "jenis_kelamin": {
+                                        "type": "string",
+                                        "enum": [
+                                            "L",
+                                            "P"
+                                        ]
+                                    },
+                                    "tanggal_lahir": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Aktif",
+                                            "Nonaktif"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Data warga berhasil diubah"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Data Warga"
+                ],
+                "summary": "Menonaktifkan warga",
+                "operationId": "57aa17f2ed31762289b7d9e18321f172",
+                "parameters": [
+                    {
+                        "name": "warga",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Warga berhasil dinonaktifkan"
+                    },
+                    "404": {
+                        "description": "Warga tidak ditemukan"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1211,6 +1771,18 @@
         {
             "name": "Warga - Pendaftaran",
             "description": "Warga - Pendaftaran"
+        },
+        {
+            "name": "Admin - Data RT",
+            "description": "Admin - Data RT"
+        },
+        {
+            "name": "Admin - Data RW",
+            "description": "Admin - Data RW"
+        },
+        {
+            "name": "Admin - Data Warga",
+            "description": "Admin - Data Warga"
         }
     ]
 }

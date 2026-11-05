@@ -8,6 +8,9 @@ use App\Http\Controllers\Api\PendaftaranController;
 use App\Http\Controllers\Api\IuranController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\WargaController;
+use App\Http\Controllers\Api\RtController;
+use App\Http\Controllers\Api\RwController;
 
 // ==============================
 // AUTHENTICATION
@@ -15,25 +18,27 @@ use App\Http\Controllers\Api\DashboardController;
 
 Route::prefix('auth')->group(function () {
 
-    // Login tidak membutuhkan token
+    // Login
     Route::post('/login', [
         AuthController::class,
         'login'
     ]);
 
-    // Harus sudah login
+    // Authenticated user
     Route::middleware('auth:sanctum')->group(function () {
+
+        Route::get('/me', [
+            AuthController::class,
+            'me'
+        ]);
 
         Route::post('/logout', [
             AuthController::class,
             'logout'
         ]);
 
-        Route::get('/me', [
-            AuthController::class,
-            'me'
-        ]);
     });
+
 });
 
 
@@ -46,10 +51,21 @@ Route::middleware([
     'role:Admin',
 ])->prefix('admin')->group(function () {
 
-   Route::get('/dashboard', [
-    DashboardController::class,
-    'admin',
+    // Dashboard Admin
+    Route::get('/dashboard', [
+        DashboardController::class,
+        'admin'
     ]);
+
+    // AD-01: Data Warga
+    Route::apiResource('warga', WargaController::class);
+
+    // AD-01: Data RT
+    Route::apiResource('rt', RtController::class);
+
+    // AD-01: Data RW
+    Route::apiResource('rw', RwController::class);
+
 });
 
 
@@ -63,47 +79,46 @@ Route::middleware([
 ])->prefix('panitia')->group(function () {
 
     Route::get('/dashboard', [
-    DashboardController::class,
-    'panitia',
+        DashboardController::class,
+        'panitia'
     ]);
+
 });
 
 
-
- // ==============================
- // WARGA
- // ==============================
+// ==============================
+// WARGA
+// ==============================
 
 Route::middleware([
     'auth:sanctum',
     'role:Warga',
 ])->prefix('warga')->group(function () {
 
+    // Dashboard
     Route::get('/dashboard', [
-    DashboardController::class,
-    'warga',
+        DashboardController::class,
+        'warga'
     ]);
 
-    // PB-02: Beranda Warga
+    // PB-02: Beranda
     Route::get('/beranda', [
         BerandaController::class,
         'index'
     ]);
 
-    
-    // PB-03: Daftar Lomba Warga
+    // PB-03: Lomba
     Route::get('/lomba', [
         LombaController::class,
         'index'
     ]);
 
-    // PB-03: Detail Lomba Warga
     Route::get('/lomba/{id}', [
         LombaController::class,
         'show'
     ])->whereNumber('id');
 
-    // PB-04: Pendaftaran Lomba Warga
+    // PB-04: Pendaftaran
     Route::get('/pendaftaran', [
         PendaftaranController::class,
         'index'
@@ -114,7 +129,7 @@ Route::middleware([
         'store'
     ]);
 
-    // PB-05: Iuran dan Pembayaran Warga
+    // PB-05: Iuran
     Route::get('/iuran', [
         IuranController::class,
         'index'
@@ -130,7 +145,7 @@ Route::middleware([
         'bayar'
     ])->whereNumber('id_iuran');
 
-    // PB-06: Notifikasi Warga
+    // PB-06: Notifikasi
     Route::get('/notifikasi', [
         NotifikasiController::class,
         'index'
@@ -150,7 +165,6 @@ Route::middleware([
         NotifikasiController::class,
         'markAllAsRead'
     ]);
-
 
 });
 

@@ -13,8 +13,6 @@ class Rt extends Model
 
     protected $primaryKey = 'id_rt';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'id_rw',
         'nomor_rt',

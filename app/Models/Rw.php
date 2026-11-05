@@ -13,8 +13,6 @@ class Rw extends Model
 
     protected $primaryKey = 'id_rw';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'nomor_rw',
         'nama_rw',

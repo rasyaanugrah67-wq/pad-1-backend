@@ -13,8 +13,6 @@ class Warga extends Model
 
     protected $primaryKey = 'id_warga';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'id_rt',
         'nik',
