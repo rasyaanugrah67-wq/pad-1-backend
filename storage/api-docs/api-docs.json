@@ -666,6 +666,350 @@
                 ]
             }
         },
+        "/api/warga/lomba": {
+            "get": {
+                "tags": [
+                    "Warga - Lomba"
+                ],
+                "summary": "Menampilkan daftar lomba",
+                "description": "Mengambil daftar lomba pada periode aktif. Mendukung pencarian nama lomba, filter status, dan filter tanggal. Informasi kapasitas peserta dan batas anggota tim turut ditampilkan.",
+                "operationId": "getDaftarLombaWarga",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Pencarian berdasarkan nama lomba",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Futsal"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter status lomba",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Semua",
+                                "Segera",
+                                "Selesai"
+                            ],
+                            "example": "Semua"
+                        }
+                    },
+                    {
+                        "name": "tanggal",
+                        "in": "query",
+                        "description": "Filter tanggal jadwal lomba",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-08-17"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar lomba berhasil ditampilkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar lomba berhasil ditampilkan."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id_lomba": {
+                                                        "type": "integer",
+                                                        "example": 3
+                                                    },
+                                                    "nama_lomba": {
+                                                        "type": "string",
+                                                        "example": "Futsal Sarung"
+                                                    },
+                                                    "jenis_pendaftaran": {
+                                                        "type": "string",
+                                                        "example": "Beregu"
+                                                    },
+                                                    "status": {
+                                                        "type": "string",
+                                                        "example": "Dibuka"
+                                                    },
+                                                    "deskripsi": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "kategori": {
+                                                        "properties": {
+                                                            "id_kategori": {
+                                                                "type": "integer",
+                                                                "example": 2
+                                                            },
+                                                            "nama_kategori": {
+                                                                "type": "string",
+                                                                "example": "Umum"
+                                                            }
+                                                        },
+                                                        "type": "object",
+                                                        "nullable": true
+                                                    },
+                                                    "kapasitas_peserta": {
+                                                        "type": "integer",
+                                                        "example": 4,
+                                                        "nullable": true
+                                                    },
+                                                    "batas_anggota_tim": {
+                                                        "type": "integer",
+                                                        "example": 5,
+                                                        "nullable": true
+                                                    },
+                                                    "sudah_mendaftar": {
+                                                        "type": "boolean",
+                                                        "example": false
+                                                    },
+                                                    "jadwal": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "properties": {
+                                                                "id_jadwal": {
+                                                                    "type": "integer",
+                                                                    "example": 1
+                                                                },
+                                                                "tanggal": {
+                                                                    "type": "string",
+                                                                    "format": "date",
+                                                                    "example": "2026-08-17"
+                                                                },
+                                                                "waktu_mulai": {
+                                                                    "type": "string",
+                                                                    "example": "08:00:00",
+                                                                    "nullable": true
+                                                                },
+                                                                "waktu_selesai": {
+                                                                    "type": "string",
+                                                                    "example": "10:00:00",
+                                                                    "nullable": true
+                                                                },
+                                                                "lokasi": {
+                                                                    "type": "string",
+                                                                    "example": "Lapangan RW",
+                                                                    "nullable": true
+                                                                },
+                                                                "status_jadwal": {
+                                                                    "type": "string",
+                                                                    "example": "Selesai"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "tanggal_tersedia": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "format": "date",
+                                                "example": "2026-08-17"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum terautentikasi"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/lomba/{id}": {
+            "get": {
+                "tags": [
+                    "Warga - Lomba"
+                ],
+                "summary": "Menampilkan detail lomba",
+                "description": "Mengambil informasi lengkap lomba, termasuk kategori, jadwal, persyaratan, alur, peraturan, kapasitas peserta, dan batas anggota tim.",
+                "operationId": "getDetailLombaWarga",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID lomba",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 3
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail lomba berhasil ditampilkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail lomba berhasil ditampilkan."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id_lomba": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "nama_lomba": {
+                                                    "type": "string",
+                                                    "example": "Futsal Sarung"
+                                                },
+                                                "jenis_pendaftaran": {
+                                                    "type": "string",
+                                                    "example": "Beregu"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "Dibuka"
+                                                },
+                                                "deskripsi": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "kategori": {
+                                                    "properties": {
+                                                        "id_kategori": {
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        },
+                                                        "nama_kategori": {
+                                                            "type": "string",
+                                                            "example": "Umum"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "kapasitas_peserta": {
+                                                    "type": "integer",
+                                                    "example": 4,
+                                                    "nullable": true
+                                                },
+                                                "batas_anggota_tim": {
+                                                    "type": "integer",
+                                                    "example": 5,
+                                                    "nullable": true
+                                                },
+                                                "sudah_mendaftar": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "jadwal": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id_jadwal": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "tanggal": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-08-17"
+                                                            },
+                                                            "waktu_mulai": {
+                                                                "type": "string",
+                                                                "example": "08:00:00",
+                                                                "nullable": true
+                                                            },
+                                                            "waktu_selesai": {
+                                                                "type": "string",
+                                                                "example": "10:00:00",
+                                                                "nullable": true
+                                                            },
+                                                            "lokasi": {
+                                                                "type": "string",
+                                                                "example": "Lapangan RW",
+                                                                "nullable": true
+                                                            },
+                                                            "status_jadwal": {
+                                                                "type": "string",
+                                                                "example": "Selesai"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "detail": {
+                                                    "properties": {
+                                                        "deskripsi": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "alur": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "syarat": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "peraturan": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan atau periode aktif belum tersedia"
+                    },
+                    "401": {
+                        "description": "Belum terautentikasi"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/warga/notifikasi": {
             "get": {
                 "tags": [
@@ -1592,6 +1936,10 @@
         {
             "name": "Warga - Iuran & Pembayaran",
             "description": "Warga - Iuran & Pembayaran"
+        },
+        {
+            "name": "Warga - Lomba",
+            "description": "Warga - Lomba"
         },
         {
             "name": "Warga - Notifikasi",
