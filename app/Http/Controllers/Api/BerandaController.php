@@ -15,14 +15,14 @@ class BerandaController extends Controller
      *     operationId="getBerandaWarga",
      *     tags={"Beranda Warga"},
      *     summary="Menampilkan data beranda warga",
-     *     description="Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung. Endpoint khusus role Warga.",
+     *     description="Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
      *         name="tanggal",
      *         in="query",
      *         required=false,
-     *         description="Tanggal agenda dengan format YYYY-MM-DD. Default menggunakan tanggal hari ini.",
+     *         description="Tanggal agenda dengan format YYYY-MM-DD",
      *         @OA\Schema(
      *             type="string",
      *             format="date",
@@ -32,18 +32,10 @@ class BerandaController extends Controller
      *
      *     @OA\Response(
      *         response=200,
-     *         description="Data beranda warga berhasil diambil",
+     *         description="Data beranda berhasil diambil",
      *         @OA\JsonContent(
-     *             @OA\Property(
-     *                 property="success",
-     *                 type="boolean",
-     *                 example=true
-     *             ),
-     *             @OA\Property(
-     *                 property="message",
-     *                 type="string",
-     *                 example="Data beranda warga berhasil diambil"
-     *             ),
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Data beranda warga berhasil diambil"),
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
@@ -52,31 +44,11 @@ class BerandaController extends Controller
      *                     property="banner",
      *                     type="object",
      *                     nullable=true,
-     *                     @OA\Property(
-     *                         property="id_periode",
-     *                         type="integer",
-     *                         example=1
-     *                     ),
-     *                     @OA\Property(
-     *                         property="judul",
-     *                         type="string",
-     *                         example="Semarak HUT RI ke-81"
-     *                     ),
-     *                     @OA\Property(
-     *                         property="tahun",
-     *                         type="string",
-     *                         example="2026"
-     *                     ),
-     *                     @OA\Property(
-     *                         property="deskripsi",
-     *                         type="string",
-     *                         example="Nusantara Bersuka, Indonesia Berjaya"
-     *                     ),
-     *                     @OA\Property(
-     *                         property="logo",
-     *                         type="string",
-     *                         nullable=true
-     *                     )
+     *                     @OA\Property(property="id_periode", type="integer", example=1),
+     *                     @OA\Property(property="judul", type="string", example="Semarak HUT RI ke-81"),
+     *                     @OA\Property(property="tahun", type="string", example="2026"),
+     *                     @OA\Property(property="deskripsi", type="string", example="Nusantara Bersuka, Indonesia Berjaya"),
+     *                     @OA\Property(property="logo", type="string", nullable=true)
      *                 ),
      *
      *                 @OA\Property(
@@ -90,48 +62,14 @@ class BerandaController extends Controller
      *                     property="jadwal_agenda",
      *                     type="array",
      *                     @OA\Items(
-     *                         type="object",
-     *                         @OA\Property(
-     *                             property="id_jadwal",
-     *                             type="integer",
-     *                             example=1
-     *                         ),
-     *                         @OA\Property(
-     *                             property="id_lomba",
-     *                             type="integer",
-     *                             example=1
-     *                         ),
-     *                         @OA\Property(
-     *                             property="nama_lomba",
-     *                             type="string",
-     *                             example="Tarik Tambang"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="nama_kategori",
-     *                             type="string",
-     *                             example="Dewasa"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="tanggal",
-     *                             type="string",
-     *                             format="date",
-     *                             example="2026-08-15"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="waktu_mulai",
-     *                             type="string",
-     *                             example="09:00:00"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="waktu_selesai",
-     *                             type="string",
-     *                             example="11:00:00"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="lokasi",
-     *                             type="string",
-     *                             example="Lapangan Timur"
-     *                         )
+     *                         @OA\Property(property="id_jadwal", type="integer", example=1),
+     *                         @OA\Property(property="id_lomba", type="integer", example=1),
+     *                         @OA\Property(property="nama_lomba", type="string", example="Tarik Tambang"),
+     *                         @OA\Property(property="nama_kategori", type="string", example="Dewasa"),
+     *                         @OA\Property(property="tanggal", type="string", format="date", example="2026-08-15"),
+     *                         @OA\Property(property="waktu_mulai", type="string", example="09:00:00"),
+     *                         @OA\Property(property="waktu_selesai", type="string", example="11:00:00"),
+     *                         @OA\Property(property="lokasi", type="string", example="Lapangan Timur")
      *                     )
      *                 ),
      *
@@ -139,26 +77,10 @@ class BerandaController extends Controller
      *                     property="pengumuman_terbaru",
      *                     type="object",
      *                     nullable=true,
-     *                     @OA\Property(
-     *                         property="id_pengumuman",
-     *                         type="integer",
-     *                         example=1
-     *                     ),
-     *                     @OA\Property(
-     *                         property="judul",
-     *                         type="string",
-     *                         example="Pengumuman Jadwal Lomba 17 Agustus"
-     *                     ),
-     *                     @OA\Property(
-     *                         property="isi",
-     *                         type="string",
-     *                         example="Seluruh warga diharapkan hadir dan mengikuti perlombaan 17 Agustus."
-     *                     ),
-     *                     @OA\Property(
-     *                         property="tanggal_publikasi",
-     *                         type="string",
-     *                         example="2026-08-14 08:00:00"
-     *                     )
+     *                     @OA\Property(property="id_pengumuman", type="integer", example=1),
+     *                     @OA\Property(property="judul", type="string", example="Pengumuman Jadwal Lomba 17 Agustus"),
+     *                     @OA\Property(property="isi", type="string", example="Seluruh warga diharapkan hadir."),
+     *                     @OA\Property(property="tanggal_publikasi", type="string", example="2026-08-14 08:00:00")
      *                 ),
      *
      *                 @OA\Property(
@@ -166,60 +88,25 @@ class BerandaController extends Controller
      *                     type="array",
      *                     description="Daftar pertandingan yang berstatus Berlangsung",
      *                     @OA\Items(
-     *                         type="object",
-     *                         @OA\Property(
-     *                             property="id_pertandingan",
-     *                             type="integer",
-     *                             example=1
-     *                         ),
-     *                         @OA\Property(
-     *                             property="id_lomba",
-     *                             type="integer",
-     *                             example=1
-     *                         ),
-     *                         @OA\Property(
-     *                             property="nama_lomba",
-     *                             type="string",
-     *                             example="Tarik Tambang"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="peserta_1",
-     *                             type="string",
-     *                             example="RT 01"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="peserta_2",
-     *                             type="string",
-     *                             example="RT 02"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="waktu_mulai",
-     *                             type="string",
-     *                             example="2026-08-15 09:00:00"
-     *                         ),
-     *                         @OA\Property(
-     *                             property="status",
-     *                             type="string",
-     *                             example="Berlangsung"
-     *                         )
+     *                         @OA\Property(property="id_pertandingan", type="integer", example=1),
+     *                         @OA\Property(property="id_lomba", type="integer", example=1),
+     *                         @OA\Property(property="nama_lomba", type="string", example="Tarik Tambang"),
+     *                         @OA\Property(property="peserta_1", type="string", example="RT 01"),
+     *                         @OA\Property(property="peserta_2", type="string", example="RT 02"),
+     *                         @OA\Property(property="babak", type="string", nullable=true, example="Semifinal"),
+     *                         @OA\Property(property="waktu_mulai", type="string", example="2026-08-15 09:00:00"),
+     *                         @OA\Property(property="waktu_selesai", type="string", nullable=true, example="2026-08-15 11:00:00"),
+     *                         @OA\Property(property="status", type="string", example="Berlangsung"),
+     *                         @OA\Property(property="lokasi", type="string", nullable=true, example="Lapangan Utara")
      *                     )
      *                 )
      *             )
      *         )
      *     ),
      *
-     *     @OA\Response(
-     *         response=401,
-     *         description="Pengguna belum login"
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Pengguna tidak memiliki role Warga"
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Format tanggal tidak valid"
-     *     )
+     *     @OA\Response(response=401, description="Pengguna belum login"),
+     *     @OA\Response(response=403, description="Pengguna tidak memiliki role Warga"),
+     *     @OA\Response(response=422, description="Format tanggal tidak valid")
      * )
      */
     public function index(Request $request): JsonResponse
@@ -298,6 +185,12 @@ class BerandaController extends Controller
                 '=',
                 'l.id_lomba'
             )
+            ->leftJoin(
+                'jadwal_lomba as j',
+                'p.id_jadwal',
+                '=',
+                'j.id_jadwal'
+            )
             ->where('p.status', 'Berlangsung')
             ->when($periode, function ($query) use ($periode) {
                 $query->where(
@@ -312,7 +205,9 @@ class BerandaController extends Controller
                 'p.peserta_1',
                 'p.peserta_2',
                 'p.waktu_mulai',
-                'p.status'
+                'p.waktu_selesai',
+                'p.status',
+                'j.lokasi'
             )
             ->orderBy('p.waktu_mulai')
             ->get();

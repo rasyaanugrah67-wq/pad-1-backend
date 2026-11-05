@@ -64,5 +64,14 @@ class Lomba extends Model
     {
         return $this->hasMany(Dokumentasi::class, 'id_lomba', 'id_lomba');
     }
+
+    public function pertandingan(): HasMany
+{
+    return $this->hasMany(
+        Pertandingan::class,
+        'id_lomba',
+        'id_lomba'
+    );
+}
 }
 

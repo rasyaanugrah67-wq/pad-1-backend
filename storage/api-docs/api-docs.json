@@ -113,13 +113,13 @@
                     "Beranda Warga"
                 ],
                 "summary": "Menampilkan data beranda warga",
-                "description": "Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung. Endpoint khusus role Warga.",
+                "description": "Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung.",
                 "operationId": "getBerandaWarga",
                 "parameters": [
                     {
                         "name": "tanggal",
                         "in": "query",
-                        "description": "Tanggal agenda dengan format YYYY-MM-DD. Default menggunakan tanggal hari ini.",
+                        "description": "Tanggal agenda dengan format YYYY-MM-DD",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -130,7 +130,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Data beranda warga berhasil diambil",
+                        "description": "Data beranda berhasil diambil",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -229,7 +229,7 @@
                                                         },
                                                         "isi": {
                                                             "type": "string",
-                                                            "example": "Seluruh warga diharapkan hadir dan mengikuti perlombaan 17 Agustus."
+                                                            "example": "Seluruh warga diharapkan hadir."
                                                         },
                                                         "tanggal_publikasi": {
                                                             "type": "string",
@@ -264,13 +264,28 @@
                                                                 "type": "string",
                                                                 "example": "RT 02"
                                                             },
+                                                            "babak": {
+                                                                "type": "string",
+                                                                "example": "Semifinal",
+                                                                "nullable": true
+                                                            },
                                                             "waktu_mulai": {
                                                                 "type": "string",
                                                                 "example": "2026-08-15 09:00:00"
                                                             },
+                                                            "waktu_selesai": {
+                                                                "type": "string",
+                                                                "example": "2026-08-15 11:00:00",
+                                                                "nullable": true
+                                                            },
                                                             "status": {
                                                                 "type": "string",
                                                                 "example": "Berlangsung"
+                                                            },
+                                                            "lokasi": {
+                                                                "type": "string",
+                                                                "example": "Lapangan Utara",
+                                                                "nullable": true
                                                             }
                                                         },
                                                         "type": "object"
