@@ -15,10 +15,8 @@ use Illuminate\Support\Facades\Validator;
 
 class PendaftaranController extends Controller
 {
-
-
     /**
-     * PB-04: Mengambil riwayat pendaftaran milik warga yang sedang login (Individu & Beregu).
+     * PB-04: Mengambil riwayat pendaftaran milik warga yang sedang login.
      *
      * @OA\Get(
      *     path="/api/warga/pendaftaran",
@@ -65,6 +63,7 @@ class PendaftaranController extends Controller
                 ]);
             },
             'anggota',
+            'tim.pendaftaran.warga',
         ])
             ->where('id_warga', $idWarga)
             ->orderByDesc('tanggal_daftar')
@@ -78,36 +77,26 @@ class PendaftaranController extends Controller
         ]);
     }
 
-
-    
     /**
-     * PB-04: Mendaftar lomba (Mendukung Individu dan Regu/Tim berdasarkan data lomba di DB).
+     * PB-04: Mendaftar lomba individu atau beregu.
      *
      * @OA\Post(
      *     path="/api/warga/pendaftaran",
      *     operationId="buatPendaftaranLombaWarga",
      *     tags={"Warga - Pendaftaran"},
-     *     summary="Mendaftarkan warga ke perlombaan (Individu atau Beregu)",
-     *     description="Mendaftar ke lomba yang berstatus Dibuka. Untuk lomba individu (Catur, Makan Kerupuk, Mewarnai), cukup mengirim 'id_lomba'. Untuk lomba beregu (Tarik Tambang, Futsal Sarung), wajib menyertakan 'nama_tim' dan array 'anggota' minimal 1 orang.",
+     *     summary="Mendaftarkan warga ke perlombaan",
+     *     description="Warga cukup mengirimkan id_lomba. Untuk lomba beregu, sistem akan mengacak peserta dan membentuk tim secara otomatis ketika jumlah peserta mencapai batas anggota tim.",
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
-     *         description="Data pendaftaran lomba",
+     *         description="Cukup kirim ID lomba yang ingin diikuti.",
      *         @OA\JsonContent(
      *             required={"id_lomba"},
-     *             @OA\Property(property="id_lomba", type="integer", example=1, description="ID lomba yang ingin didaftarkan"),
-     *             @OA\Property(property="nama_tim", type="string", maxLength=100, nullable=true, example="Garuda Muda", description="Wajib untuk lomba beregu, tidak boleh diisi untuk lomba individu"),
      *             @OA\Property(
-     *                 property="anggota",
-     *                 type="array",
-     *                 nullable=true,
-     *                 description="Daftar anggota tim (wajib untuk lomba beregu, minimal 1 anggota)",
-     *                 @OA\Items(
-     *                     type="object",
-     *                     required={"nama","no_hp"},
-     *                     @OA\Property(property="nama", type="string", maxLength=100, example="Ahmad Dahlan"),
-     *                     @OA\Property(property="no_hp", type="string", maxLength=20, example="081234567891")
-     *                 )
+     *                 property="id_lomba",
+     *                 type="integer",
+     *                 example=3,
+     *                 description="ID lomba yang ingin didaftarkan"
      *             )
      *         )
      *     ),
@@ -116,17 +105,17 @@ class PendaftaranController extends Controller
      *         description="Pendaftaran lomba berhasil diajukan",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Pendaftaran lomba berhasil diajukan."),
-     *             @OA\Property(property="data", type="object")
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object"),
+     *             @OA\Property(property="kuota", type="object")
      *         )
      *     ),
      *     @OA\Response(response=401, description="Unauthenticated"),
-     *     @OA\Response(response=403, description="Akses ditolak (Bukan warga atau akun belum terhubung data warga)"),
-     *     @OA\Response(response=409, description="Conflict - Anda sudah terdaftar pada perlombaan ini"),
-     *     @OA\Response(response=422, description="Unprocessable Entity - Validasi gagal, lomba tidak ditemukan, lomba ditutup, atau format data tim tidak sesuai")
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=409, description="Anda sudah terdaftar pada perlombaan ini"),
+     *     @OA\Response(response=422, description="Validasi gagal atau kapasitas lomba penuh")
      * )
      */
-    
     public function store(Request $request): JsonResponse
     {
         $akun = $request->user();
@@ -158,8 +147,6 @@ class PendaftaranController extends Controller
         try {
             $hasil = DB::transaction(function () use ($request, $idWarga) {
 
-                // Kunci data lomba agar kuota tidak terlewati
-                // jika beberapa warga mendaftar bersamaan.
                 $lomba = Lomba::where('id_lomba', $request->id_lomba)
                     ->lockForUpdate()
                     ->first();
@@ -174,7 +161,6 @@ class PendaftaranController extends Controller
                 $isBeregu = $lomba->isBeregu()
                     || strtolower(trim($lomba->jenis_pendaftaran ?? '')) === 'beregu';
 
-                // Warga tidak boleh mendaftar dua kali pada lomba yang sama.
                 $sudahTerdaftar = Pendaftaran::where('id_warga', $idWarga)
                     ->where('id_lomba', $lomba->id_lomba)
                     ->exists();
@@ -186,9 +172,7 @@ class PendaftaranController extends Controller
                     ];
                 }
 
-                // ==========================================
-                // PENDAFTARAN LOMBA INDIVIDU
-                // ==========================================
+                // PENDAFTARAN INDIVIDU
                 if (!$isBeregu) {
 
                     $jumlahPendaftar = Pendaftaran::where(
@@ -246,14 +230,10 @@ class PendaftaranController extends Controller
                     ];
                 }
 
-                // ==========================================
-                // PENDAFTARAN LOMBA BEREGU
-                // ==========================================
-
+                // PENDAFTARAN BEREGU
                 $kapasitasTim = (int) $lomba->kapasitas_peserta;
                 $batasAnggota = (int) $lomba->batas_anggota_tim;
 
-                // Kapasitas dan batas anggota wajib diatur Admin/Panitia.
                 if ($kapasitasTim <= 0 || $batasAnggota <= 0) {
                     return [
                         'error' => 'Kapasitas tim dan batas anggota tim belum diatur. Silakan hubungi panitia.',
@@ -261,8 +241,6 @@ class PendaftaranController extends Controller
                     ];
                 }
 
-                // Pendaftaran beregu baru dilakukan per orang.
-                // Tidak lagi menggunakan nama_tim atau anggota[] dari warga.
                 if (
                     $request->filled('nama_tim') ||
                     ($request->has('anggota') && !empty($request->input('anggota')))
@@ -273,8 +251,7 @@ class PendaftaranController extends Controller
                     ];
                 }
 
-                // Tim lama yang belum dipindahkan ke tabel tim_lomba
-                // tetap dihitung sebagai tim yang memakai kapasitas.
+                // Menghitung tim lama agar data sebelumnya tetap dipertahankan.
                 $jumlahTimLama = Pendaftaran::where(
                     'id_lomba',
                     $lomba->id_lomba
@@ -284,13 +261,13 @@ class PendaftaranController extends Controller
                     ->whereNull('id_tim')
                     ->count();
 
-                // Tim yang sudah dibentuk otomatis.
+                // Menghitung tim otomatis yang sudah terbentuk.
                 $jumlahTimOtomatis = TimLomba::where(
                     'id_lomba',
                     $lomba->id_lomba
                 )->count();
 
-                // Peserta baru yang belum mendapatkan tim.
+                // Menghitung peserta baru yang belum memiliki tim.
                 $jumlahMenungguTim = Pendaftaran::where(
                     'id_lomba',
                     $lomba->id_lomba
@@ -300,8 +277,6 @@ class PendaftaranController extends Controller
                     ->whereNull('nama_tim')
                     ->count();
 
-                // Periksa apakah peserta baru masih bisa ditampung.
-                // Sisa peserta harus bisa membentuk tim dalam kapasitas yang tersedia.
                 $slotTimDibutuhkan = (int) ceil(
                     ($jumlahMenungguTim + 1) / $batasAnggota
                 );
@@ -317,7 +292,7 @@ class PendaftaranController extends Controller
                     ];
                 }
 
-                // Simpan satu pendaftaran untuk satu warga.
+                // Membuat pendaftaran satu warga.
                 $pendaftaran = Pendaftaran::create([
                     'id_warga' => $idWarga,
                     'id_lomba' => $lomba->id_lomba,
@@ -328,7 +303,7 @@ class PendaftaranController extends Controller
                     'catatan' => null,
                 ]);
 
-                // Ambil seluruh peserta aktif yang belum memiliki tim.
+                // Mengambil peserta yang belum mendapatkan tim.
                 $pesertaMenunggu = Pendaftaran::where(
                     'id_lomba',
                     $lomba->id_lomba
@@ -341,7 +316,6 @@ class PendaftaranController extends Controller
                     ->get()
                     ->all();
 
-                // Bentuk tim setiap kali jumlah peserta mencukupi.
                 $jumlahTimTerbentuk = 0;
 
                 while (
@@ -349,10 +323,8 @@ class PendaftaranController extends Controller
                     ($jumlahTimLama + $jumlahTimOtomatis + $jumlahTimTerbentuk)
                         < $kapasitasTim
                 ) {
-                    // Acak urutan peserta.
                     shuffle($pesertaMenunggu);
 
-                    // Ambil peserta sesuai batas anggota per tim.
                     $anggotaTim = array_splice(
                         $pesertaMenunggu,
                         0,
@@ -364,13 +336,11 @@ class PendaftaranController extends Controller
                         + $jumlahTimTerbentuk
                         + 1;
 
-                    // Buat tim baru.
                     $tim = TimLomba::create([
                         'id_lomba' => $lomba->id_lomba,
                         'nama_tim' => 'Tim ' . $nomorTim,
                     ]);
 
-                    // Hubungkan setiap peserta dengan tim yang terbentuk.
                     foreach ($anggotaTim as $peserta) {
                         $peserta->update([
                             'id_tim' => $tim->id_tim,
@@ -380,7 +350,6 @@ class PendaftaranController extends Controller
                     $jumlahTimTerbentuk++;
                 }
 
-                // Notifikasi pendaftaran.
                 Notifikasi::create([
                     'id_warga' => $idWarga,
                     'judul' => 'Pendaftaran Lomba Berhasil Diajukan',
@@ -389,7 +358,6 @@ class PendaftaranController extends Controller
                     'status_baca' => false,
                 ]);
 
-                // Hitung kembali kondisi kuota setelah pembentukan tim.
                 $jumlahTim = $jumlahTimLama
                     + $jumlahTimOtomatis
                     + $jumlahTimTerbentuk;
@@ -440,7 +408,6 @@ class PendaftaranController extends Controller
 
             $pendaftaran = $hasil['pendaftaran'];
 
-            // Muat data lomba, kategori, jadwal, dan tim.
             $pendaftaran->load([
                 'lomba.kategori',
                 'lomba.jadwal',
@@ -466,5 +433,4 @@ class PendaftaranController extends Controller
             ], 500);
         }
     }
-
 }

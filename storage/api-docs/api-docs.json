@@ -666,144 +666,6 @@
                 ]
             }
         },
-        "/api/warga/lomba": {
-            "get": {
-                "tags": [
-                    "Warga - Lomba"
-                ],
-                "summary": "Mengambil daftar lomba",
-                "description": "Mengambil daftar lomba pada periode aktif dengan pencarian dan filter status.",
-                "operationId": "getDaftarLombaWarga",
-                "parameters": [
-                    {
-                        "name": "search",
-                        "in": "query",
-                        "description": "Pencarian berdasarkan nama lomba",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "maxLength": 100
-                        },
-                        "example": "catur"
-                    },
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "description": "Filter status lomba",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "Semua",
-                                "Segera",
-                                "Selesai"
-                            ]
-                        },
-                        "example": "Semua"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Daftar lomba berhasil diambil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Belum login"
-                    },
-                    "403": {
-                        "description": "Role tidak diizinkan"
-                    },
-                    "422": {
-                        "description": "Parameter tidak valid"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/warga/lomba/{id}": {
-            "get": {
-                "tags": [
-                    "Warga - Lomba"
-                ],
-                "summary": "Mengambil detail lomba",
-                "operationId": "getDetailLombaWarga",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID lomba",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "example": 1
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Detail lomba berhasil diambil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Belum login"
-                    },
-                    "403": {
-                        "description": "Role tidak diizinkan"
-                    },
-                    "404": {
-                        "description": "Lomba tidak ditemukan"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
         "/api/warga/notifikasi": {
             "get": {
                 "tags": [
@@ -1022,7 +884,7 @@
                     "Warga - Pendaftaran"
                 ],
                 "summary": "Melihat riwayat pendaftaran lomba",
-                "description": "PB-04: Mengambil riwayat pendaftaran milik warga yang sedang login (Individu & Beregu).",
+                "description": "PB-04: Mengambil riwayat pendaftaran milik warga yang sedang login.",
                 "operationId": "getRiwayatPendaftaranWarga",
                 "responses": {
                     "200": {
@@ -1067,11 +929,11 @@
                 "tags": [
                     "Warga - Pendaftaran"
                 ],
-                "summary": "Mendaftarkan warga ke perlombaan (Individu atau Beregu)",
-                "description": "Mendaftar ke lomba yang berstatus Dibuka. Untuk lomba individu (Catur, Makan Kerupuk, Mewarnai), cukup mengirim 'id_lomba'. Untuk lomba beregu (Tarik Tambang, Futsal Sarung), wajib menyertakan 'nama_tim' dan array 'anggota' minimal 1 orang.",
+                "summary": "Mendaftarkan warga ke perlombaan",
+                "description": "Warga cukup mengirimkan id_lomba. Untuk lomba beregu, sistem akan mengacak peserta dan membentuk tim secara otomatis ketika jumlah peserta mencapai batas anggota tim.",
                 "operationId": "buatPendaftaranLombaWarga",
                 "requestBody": {
-                    "description": "Data pendaftaran lomba",
+                    "description": "Cukup kirim ID lomba yang ingin diikuti.",
                     "required": true,
                     "content": {
                         "application/json": {
@@ -1083,38 +945,7 @@
                                     "id_lomba": {
                                         "description": "ID lomba yang ingin didaftarkan",
                                         "type": "integer",
-                                        "example": 1
-                                    },
-                                    "nama_tim": {
-                                        "description": "Wajib untuk lomba beregu, tidak boleh diisi untuk lomba individu",
-                                        "type": "string",
-                                        "maxLength": 100,
-                                        "example": "Garuda Muda",
-                                        "nullable": true
-                                    },
-                                    "anggota": {
-                                        "description": "Daftar anggota tim (wajib untuk lomba beregu, minimal 1 anggota)",
-                                        "type": "array",
-                                        "items": {
-                                            "required": [
-                                                "nama",
-                                                "no_hp"
-                                            ],
-                                            "properties": {
-                                                "nama": {
-                                                    "type": "string",
-                                                    "maxLength": 100,
-                                                    "example": "Ahmad Dahlan"
-                                                },
-                                                "no_hp": {
-                                                    "type": "string",
-                                                    "maxLength": 20,
-                                                    "example": "081234567891"
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "nullable": true
+                                        "example": 3
                                     }
                                 },
                                 "type": "object"
@@ -1134,10 +965,12 @@
                                             "example": true
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "example": "Pendaftaran lomba berhasil diajukan."
+                                            "type": "string"
                                         },
                                         "data": {
+                                            "type": "object"
+                                        },
+                                        "kuota": {
                                             "type": "object"
                                         }
                                     },
@@ -1150,13 +983,13 @@
                         "description": "Unauthenticated"
                     },
                     "403": {
-                        "description": "Akses ditolak (Bukan warga atau akun belum terhubung data warga)"
+                        "description": "Akses ditolak"
                     },
                     "409": {
-                        "description": "Conflict - Anda sudah terdaftar pada perlombaan ini"
+                        "description": "Anda sudah terdaftar pada perlombaan ini"
                     },
                     "422": {
-                        "description": "Unprocessable Entity - Validasi gagal, lomba tidak ditemukan, lomba ditutup, atau format data tim tidak sesuai"
+                        "description": "Validasi gagal atau kapasitas lomba penuh"
                     }
                 },
                 "security": [
@@ -1759,10 +1592,6 @@
         {
             "name": "Warga - Iuran & Pembayaran",
             "description": "Warga - Iuran & Pembayaran"
-        },
-        {
-            "name": "Warga - Lomba",
-            "description": "Warga - Lomba"
         },
         {
             "name": "Warga - Notifikasi",
