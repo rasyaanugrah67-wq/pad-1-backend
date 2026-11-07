@@ -433,4 +433,130 @@ class PendaftaranController extends Controller
             ], 500);
         }
     }
+
+            /**
+     * PB-04: Melihat detail pendaftaran milik warga yang sedang login.
+     *
+     * @OA\Get(
+     *     path="/api/warga/pendaftaran/{id}",
+     *     operationId="getDetailPendaftaranWarga",
+     *     tags={"Warga - Pendaftaran"},
+     *     summary="Melihat detail pendaftaran lomba",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Detail pendaftaran berhasil diambil"
+     *     ),
+     *     @OA\Response(response=404, description="Pendaftaran tidak ditemukan"),
+     *     @OA\Response(response=401, description="Belum login")
+     * )
+     */
+    public function show(Request $request, $id): JsonResponse
+    {
+        $idWarga = $request->user()->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $pendaftaran = Pendaftaran::with([
+            'lomba.kategori',
+            'lomba.jadwal',
+            'anggota',
+            'tim.pendaftaran.warga',
+        ])
+            ->where('id_pendaftaran', $id)
+            ->where('id_warga', $idWarga)
+            ->first();
+
+        if (!$pendaftaran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data pendaftaran tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail pendaftaran berhasil diambil.',
+            'data' => $pendaftaran,
+        ]);
+    }
+
+    /**
+     * PB-04: Membatalkan pendaftaran milik warga yang sedang login.
+     *
+     * @OA\Delete(
+     *     path="/api/warga/pendaftaran/{id}",
+     *     operationId="batalkanPendaftaranWarga",
+     *     tags={"Warga - Pendaftaran"},
+     *     summary="Membatalkan pendaftaran lomba",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pendaftaran berhasil dibatalkan"
+     *     ),
+     *     @OA\Response(response=404, description="Pendaftaran tidak ditemukan"),
+     *     @OA\Response(response=422, description="Pendaftaran tidak dapat dibatalkan"),
+     *     @OA\Response(response=401, description="Belum login")
+     * )
+     */
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        $idWarga = $request->user()->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $pendaftaran = Pendaftaran::where('id_pendaftaran', $id)
+            ->where('id_warga', $idWarga)
+            ->first();
+
+        if (!$pendaftaran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data pendaftaran tidak ditemukan.',
+            ], 404);
+        }
+
+        if ($pendaftaran->status !== 'Menunggu') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pendaftaran hanya dapat dibatalkan ketika masih berstatus Menunggu.',
+            ], 422);
+        }
+
+        if ($pendaftaran->id_tim !== null || $pendaftaran->nama_tim !== null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pendaftaran tidak dapat dibatalkan karena peserta sudah tergabung dalam tim.',
+            ], 422);
+        }
+
+        $pendaftaran->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pendaftaran lomba berhasil dibatalkan.',
+        ]);
+    }
 }

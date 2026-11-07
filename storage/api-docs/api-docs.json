@@ -1343,6 +1343,79 @@
                 ]
             }
         },
+        "/api/warga/pendaftaran/{id}": {
+            "get": {
+                "tags": [
+                    "Warga - Pendaftaran"
+                ],
+                "summary": "Melihat detail pendaftaran lomba",
+                "description": "PB-04: Melihat detail pendaftaran milik warga yang sedang login.",
+                "operationId": "getDetailPendaftaranWarga",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail pendaftaran berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Warga - Pendaftaran"
+                ],
+                "summary": "Membatalkan pendaftaran lomba",
+                "description": "PB-04: Membatalkan pendaftaran milik warga yang sedang login.",
+                "operationId": "batalkanPendaftaranWarga",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pendaftaran berhasil dibatalkan"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Pendaftaran tidak dapat dibatalkan"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/admin/rt": {
             "get": {
                 "tags": [
