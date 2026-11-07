@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BerandaController;
 use App\Http\Controllers\Api\LombaController;
 use App\Http\Controllers\Api\PendaftaranController;
+use App\Http\Controllers\Api\PendaftaranManagementController;
 use App\Http\Controllers\Api\IuranController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\DashboardController;
@@ -18,13 +19,11 @@ use App\Http\Controllers\Api\RwController;
 
 Route::prefix('auth')->group(function () {
 
-    // Login
     Route::post('/login', [
         AuthController::class,
         'login'
     ]);
 
-    // Authenticated user
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/me', [
@@ -66,6 +65,32 @@ Route::middleware([
     // AD-01: Data RW
     Route::apiResource('rw', RwController::class);
 
+    // PB-04: Pengelolaan Pendaftaran
+    Route::get('/pendaftaran', [
+        PendaftaranManagementController::class,
+        'index'
+    ]);
+
+    Route::get('/pendaftaran/{id}', [
+        PendaftaranManagementController::class,
+        'show'
+    ])->whereNumber('id');
+
+    Route::patch('/pendaftaran/{id}/status', [
+        PendaftaranManagementController::class,
+        'updateStatus'
+    ])->whereNumber('id');
+
+    Route::get('/lomba/{id}/pendaftaran', [
+        PendaftaranManagementController::class,
+        'byLomba'
+    ])->whereNumber('id');
+
+    Route::get('/lomba/{id}/kuota', [
+        PendaftaranManagementController::class,
+        'kuota'
+    ])->whereNumber('id');
+
 });
 
 
@@ -82,6 +107,32 @@ Route::middleware([
         DashboardController::class,
         'panitia'
     ]);
+
+    // PB-04: Pengelolaan Pendaftaran
+    Route::get('/pendaftaran', [
+        PendaftaranManagementController::class,
+        'index'
+    ]);
+
+    Route::get('/pendaftaran/{id}', [
+        PendaftaranManagementController::class,
+        'show'
+    ])->whereNumber('id');
+
+    Route::patch('/pendaftaran/{id}/status', [
+        PendaftaranManagementController::class,
+        'updateStatus'
+    ])->whereNumber('id');
+
+    Route::get('/lomba/{id}/pendaftaran', [
+        PendaftaranManagementController::class,
+        'byLomba'
+    ])->whereNumber('id');
+
+    Route::get('/lomba/{id}/kuota', [
+        PendaftaranManagementController::class,
+        'kuota'
+    ])->whereNumber('id');
 
 });
 
@@ -128,6 +179,16 @@ Route::middleware([
         PendaftaranController::class,
         'store'
     ]);
+
+    Route::get('/pendaftaran/{id}', [
+        PendaftaranController::class,
+        'show'
+    ])->whereNumber('id');
+
+    Route::delete('/pendaftaran/{id}', [
+        PendaftaranController::class,
+        'destroy'
+    ])->whereNumber('id');
 
     // PB-05: Iuran
     Route::get('/iuran', [
