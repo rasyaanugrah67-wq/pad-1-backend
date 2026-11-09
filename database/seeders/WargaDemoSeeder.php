@@ -50,12 +50,12 @@ class WargaDemoSeeder extends Seeder
 
             $idWarga = DB::table('warga')->insertGetId([
                 'id_rt' => $idRt,
-                'nik' => null,
+                'nik' => (string) random_int(1000000000000000, 9999999999999999),
                 'nama' => 'Warga Demo PAD',
-                'no_hp' => null,
+                'no_hp' => '08' . random_int(10000000000, 99999999999),
                 'alamat' => 'RT 01',
                 'jenis_kelamin' => 'L',
-                'tanggal_lahir' => null,
+                'tanggal_lahir' => '2000-01-01',
                 'status' => 'Aktif',
                 'created_at' => now(),
                 'updated_at' => now(),

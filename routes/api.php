@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PendaftaranManagementController;
 use App\Http\Controllers\Api\IuranController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PertandinganController;
 use App\Http\Controllers\Api\WargaController;
 use App\Http\Controllers\Api\RtController;
 use App\Http\Controllers\Api\RwController;
@@ -238,6 +239,37 @@ Route::middleware([
     'auth:sanctum',
     'role:Admin,Panitia',
 ])->group(function () {
+
+    // Dashboard bersama untuk Admin dan Panitia.
+    Route::get('/dashboard', [
+        DashboardController::class,
+        'index'
+    ]);
+
+    Route::get('/pertandingan/options', [
+        PertandinganController::class,
+        'options'
+    ]);
+
+    Route::get('/pertandingan', [
+        PertandinganController::class,
+        'index'
+    ]);
+
+    Route::post('/pertandingan', [
+        PertandinganController::class,
+        'store'
+    ]);
+
+    Route::patch('/pertandingan/{id}', [
+        PertandinganController::class,
+        'update'
+    ])->whereNumber('id');
+
+    Route::delete('/pertandingan/{id}', [
+        PertandinganController::class,
+        'destroy'
+    ])->whereNumber('id');
 
     Route::get('/lomba/manage', function () {
         return response()->json([

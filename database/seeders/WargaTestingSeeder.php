@@ -47,12 +47,12 @@ class WargaTestingSeeder extends Seeder
             } else {
                 $idWarga = DB::table('warga')->insertGetId([
                     'id_rt' => $idRt,
-                    'nik' => null,
+                    'nik' => '3201010101010001',
                     'nama' => 'Warga Testing PAD',
-                    'no_hp' => null,
+                    'no_hp' => '081234567891',
                     'alamat' => 'RT 01',
                     'jenis_kelamin' => 'L',
-                    'tanggal_lahir' => null,
+                    'tanggal_lahir' => '2000-01-01',
                     'status' => 'Aktif',
                     'created_at' => now(),
                     'updated_at' => now(),

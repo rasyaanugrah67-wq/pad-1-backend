@@ -113,7 +113,7 @@
                     "Beranda Warga"
                 ],
                 "summary": "Menampilkan data beranda warga",
-                "description": "Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung.",
+                "description": "Mengambil banner, agenda pada tanggal yang dipilih, tanggal agenda yang tersedia, pengumuman terbaru, dan pertandingan yang benar-benar sedang berlangsung saat ini.",
                 "operationId": "getBerandaWarga",
                 "parameters": [
                     {
@@ -161,7 +161,8 @@
                                                         },
                                                         "deskripsi": {
                                                             "type": "string",
-                                                            "example": "Nusantara Bersuka, Indonesia Berjaya"
+                                                            "example": "Nusantara Bersuka, Indonesia Berjaya",
+                                                            "nullable": true
                                                         },
                                                         "logo": {
                                                             "type": "string",
@@ -175,6 +176,15 @@
                                                     "type": "string",
                                                     "format": "date",
                                                     "example": "2026-08-15"
+                                                },
+                                                "tanggal_tersedia": {
+                                                    "description": "Daftar tanggal yang memiliki jadwal lomba pada periode aktif",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "example": "2026-08-15"
+                                                    }
                                                 },
                                                 "jadwal_agenda": {
                                                     "type": "array",
@@ -203,15 +213,18 @@
                                                             },
                                                             "waktu_mulai": {
                                                                 "type": "string",
-                                                                "example": "09:00:00"
+                                                                "example": "09:00:00",
+                                                                "nullable": true
                                                             },
                                                             "waktu_selesai": {
                                                                 "type": "string",
-                                                                "example": "11:00:00"
+                                                                "example": "11:00:00",
+                                                                "nullable": true
                                                             },
                                                             "lokasi": {
                                                                 "type": "string",
-                                                                "example": "Lapangan Timur"
+                                                                "example": "Lapangan Timur",
+                                                                "nullable": true
                                                             }
                                                         },
                                                         "type": "object"
@@ -240,7 +253,7 @@
                                                     "nullable": true
                                                 },
                                                 "sedang_berlangsung": {
-                                                    "description": "Daftar pertandingan yang berstatus Berlangsung",
+                                                    "description": "Daftar pertandingan berstatus Berlangsung yang tanggal dan waktunya mencakup waktu saat ini di Asia/Jakarta",
                                                     "type": "array",
                                                     "items": {
                                                         "properties": {
@@ -317,24 +330,167 @@
                 ]
             }
         },
-        "/api/admin/dashboard": {
+        "/api/dashboard": {
             "get": {
                 "tags": [
-                    "Dashboard Admin"
+                    "Dashboard"
                 ],
-                "summary": "Mengakses dashboard Admin",
-                "description": "Dashboard Admin.",
-                "operationId": "getDashboardAdmin",
+                "summary": "Mengambil ringkasan dashboard Admin dan Panitia",
+                "description": "Mengembalikan ringkasan periode aktif, pertandingan yang sedang berlangsung, dan agenda pada tanggal yang dipilih. Hanya dapat diakses Admin dan Panitia.",
+                "operationId": "getDashboardAdminPanitia",
+                "parameters": [
+                    {
+                        "name": "tanggal",
+                        "in": "query",
+                        "description": "Tanggal agenda dalam zona waktu Asia/Jakarta. Default tanggal hari ini.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-08-17"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Dashboard Admin berhasil diakses",
+                        "description": "Data dashboard berhasil diambil",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Dashboard Admin"
+                                            "example": "Data dashboard berhasil diambil."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "tanggal_filter": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-08-17"
+                                                },
+                                                "ringkasan": {
+                                                    "properties": {
+                                                        "total_lomba": {
+                                                            "type": "integer",
+                                                            "example": 12
+                                                        },
+                                                        "lomba_berlangsung": {
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        },
+                                                        "total_pendaftar": {
+                                                            "type": "integer",
+                                                            "example": 25
+                                                        },
+                                                        "pembayaran_lunas": {
+                                                            "type": "integer",
+                                                            "example": 31
+                                                        },
+                                                        "pembayaran_belum_lunas": {
+                                                            "type": "integer",
+                                                            "example": 14
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "sedang_berlangsung": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id_pertandingan": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "id_lomba": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "nama_lomba": {
+                                                                "type": "string",
+                                                                "example": "Tarik Tambang"
+                                                            },
+                                                            "lokasi": {
+                                                                "type": "string",
+                                                                "example": "Lapangan Timur",
+                                                                "nullable": true
+                                                            },
+                                                            "babak": {
+                                                                "type": "string",
+                                                                "example": "Penyisihan",
+                                                                "nullable": true
+                                                            },
+                                                            "peserta_1": {
+                                                                "type": "string",
+                                                                "example": "Tim A"
+                                                            },
+                                                            "peserta_2": {
+                                                                "type": "string",
+                                                                "example": "Tim B"
+                                                            },
+                                                            "waktu_mulai": {
+                                                                "type": "string",
+                                                                "example": "08:30:00"
+                                                            },
+                                                            "waktu_selesai": {
+                                                                "type": "string",
+                                                                "example": "09:00:00",
+                                                                "nullable": true
+                                                            },
+                                                            "status": {
+                                                                "type": "string",
+                                                                "example": "Berlangsung"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "agenda": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id_jadwal": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "id_lomba": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "nama_lomba": {
+                                                                "type": "string",
+                                                                "example": "Balap Karung"
+                                                            },
+                                                            "tanggal": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-08-17"
+                                                            },
+                                                            "waktu_mulai": {
+                                                                "type": "string",
+                                                                "example": "08:00:00",
+                                                                "nullable": true
+                                                            },
+                                                            "waktu_selesai": {
+                                                                "type": "string",
+                                                                "example": "08:30:00",
+                                                                "nullable": true
+                                                            },
+                                                            "lokasi": {
+                                                                "type": "string",
+                                                                "example": "Lapangan Utama",
+                                                                "nullable": true
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -343,7 +499,36 @@
                         }
                     },
                     "401": {
-                        "description": "Belum login"
+                        "description": "Belum login atau token tidak valid"
+                    },
+                    "403": {
+                        "description": "Hanya Admin dan Panitia yang dapat mengakses endpoint ini"
+                    },
+                    "422": {
+                        "description": "Format tanggal tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Dashboard Admin (compatibility route)",
+                "description": "Compatibility handlers for the original role-specific dashboard routes.",
+                "operationId": "getDashboardAdminCompatibility",
+                "responses": {
+                    "200": {
+                        "description": "Data dashboard bersama berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login atau token tidak valid"
                     },
                     "403": {
                         "description": "Akses ditolak"
@@ -359,30 +544,16 @@
         "/api/panitia/dashboard": {
             "get": {
                 "tags": [
-                    "Dashboard Panitia"
+                    "Dashboard"
                 ],
-                "summary": "Mengakses dashboard Panitia",
-                "description": "Dashboard Panitia.",
-                "operationId": "getDashboardPanitia",
+                "summary": "Dashboard Panitia (compatibility route)",
+                "operationId": "getDashboardPanitiaCompatibility",
                 "responses": {
                     "200": {
-                        "description": "Dashboard Panitia berhasil diakses",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Dashboard Panitia"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Data dashboard bersama berhasil diambil"
                     },
                     "401": {
-                        "description": "Belum login"
+                        "description": "Belum login atau token tidak valid"
                     },
                     "403": {
                         "description": "Akses ditolak"
@@ -401,24 +572,11 @@
                     "Dashboard Warga"
                 ],
                 "summary": "Mengakses dashboard Warga",
-                "description": "Dashboard Warga.",
+                "description": "Dashboard warga tetap terpisah dari dashboard pengelola.",
                 "operationId": "getDashboardWarga",
                 "responses": {
                     "200": {
-                        "description": "Dashboard Warga berhasil diakses",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Dashboard Warga"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Dashboard Warga berhasil diakses"
                     },
                     "401": {
                         "description": "Belum login"
@@ -1416,6 +1574,778 @@
                 ]
             }
         },
+        "/api/admin/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Melihat seluruh pendaftaran",
+                "description": "Menampilkan seluruh pendaftaran.",
+                "operationId": "adminDaftarPendaftaran",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Menunggu",
+                                "Diterima",
+                                "Ditolak"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_lomba",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pendaftaran berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Melihat seluruh pendaftaran",
+                "operationId": "panitiaDaftarPendaftaran",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Menunggu",
+                                "Diterima",
+                                "Ditolak"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_lomba",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pendaftaran berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/pendaftaran/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Melihat detail pendaftaran",
+                "description": "Melihat detail pendaftaran.",
+                "operationId": "adminDetailPendaftaran",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail pendaftaran berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/pendaftaran/{id}": {
+            "get": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Melihat detail pendaftaran",
+                "operationId": "panitiaDetailPendaftaran",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail pendaftaran berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/pendaftaran/{id}/status": {
+            "patch": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Mengubah status pendaftaran",
+                "description": "Mengubah status pendaftaran.",
+                "operationId": "adminUbahStatusPendaftaran",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Menunggu",
+                                            "Diterima",
+                                            "Ditolak"
+                                        ],
+                                        "example": "Diterima"
+                                    },
+                                    "catatan": {
+                                        "type": "string",
+                                        "example": "Persyaratan belum lengkap",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status pendaftaran berhasil diperbarui"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/pendaftaran/{id}/status": {
+            "patch": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Mengubah status pendaftaran",
+                "operationId": "panitiaUbahStatusPendaftaran",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Menunggu",
+                                            "Diterima",
+                                            "Ditolak"
+                                        ],
+                                        "example": "Diterima"
+                                    },
+                                    "catatan": {
+                                        "type": "string",
+                                        "example": "Persyaratan belum lengkap",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status pendaftaran berhasil diperbarui"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/lomba/{id}/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Melihat daftar pendaftar pada lomba tertentu",
+                "description": "Melihat pendaftar pada lomba tertentu.",
+                "operationId": "adminPendaftarPerLomba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Menunggu",
+                                "Diterima",
+                                "Ditolak"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pendaftar berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/lomba/{id}/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Melihat daftar pendaftar pada lomba tertentu",
+                "operationId": "panitiaPendaftarPerLomba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Menunggu",
+                                "Diterima",
+                                "Ditolak"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pendaftar berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/lomba/{id}/kuota": {
+            "get": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Melihat penggunaan kuota lomba",
+                "description": "Melihat kuota lomba.",
+                "operationId": "adminKuotaLomba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Informasi kuota berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/lomba/{id}/kuota": {
+            "get": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Melihat penggunaan kuota lomba",
+                "operationId": "panitiaKuotaLomba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Informasi kuota berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/pertandingan": {
+            "get": {
+                "tags": [
+                    "Admin dan Panitia - Pertandingan"
+                ],
+                "summary": "Melihat daftar pertandingan pada periode aktif",
+                "operationId": "listPertandingan",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Dijadwalkan",
+                                "Berlangsung",
+                                "Selesai"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_lomba",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "tanggal",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pertandingan berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin dan Panitia - Pertandingan"
+                ],
+                "summary": "Membuat jadwal pertandingan",
+                "description": "Membuat pertandingan pada lomba dalam periode aktif. Jadwal dan lokasi lomba dapat dihubungkan melalui id_jadwal.",
+                "operationId": "createPertandingan",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_lomba",
+                                    "peserta_1",
+                                    "peserta_2",
+                                    "tanggal",
+                                    "waktu_mulai"
+                                ],
+                                "properties": {
+                                    "id_lomba": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "id_jadwal": {
+                                        "type": "integer",
+                                        "example": 4,
+                                        "nullable": true
+                                    },
+                                    "peserta_1": {
+                                        "type": "string",
+                                        "example": "Ketoprak Sedap Malam"
+                                    },
+                                    "peserta_2": {
+                                        "type": "string",
+                                        "example": "Nasi Padang Murah"
+                                    },
+                                    "babak": {
+                                        "type": "string",
+                                        "example": "Penyisihan",
+                                        "nullable": true
+                                    },
+                                    "tanggal": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-11-09"
+                                    },
+                                    "waktu_mulai": {
+                                        "type": "string",
+                                        "example": "15:00"
+                                    },
+                                    "waktu_selesai": {
+                                        "type": "string",
+                                        "example": "16:00",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Dijadwalkan",
+                                            "Berlangsung",
+                                            "Selesai"
+                                        ],
+                                        "example": "Dijadwalkan"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pertandingan berhasil dibuat"
+                    },
+                    "401": {
+                        "description": "Belum login atau token tidak valid"
+                    },
+                    "403": {
+                        "description": "Hanya Admin dan Panitia yang dapat mengakses endpoint ini"
+                    },
+                    "422": {
+                        "description": "Data tidak valid atau lomba bukan bagian dari periode aktif"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/pertandingan/options": {
+            "get": {
+                "tags": [
+                    "Admin dan Panitia - Pertandingan"
+                ],
+                "summary": "Mengambil pilihan lomba dan jadwal untuk form pertandingan",
+                "operationId": "getPertandinganFormOptions",
+                "responses": {
+                    "200": {
+                        "description": "Pilihan form berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login atau token tidak valid"
+                    },
+                    "403": {
+                        "description": "Hanya Admin dan Panitia yang dapat mengakses endpoint ini"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/pertandingan/{id}": {
+            "delete": {
+                "tags": [
+                    "Admin dan Panitia - Pertandingan"
+                ],
+                "summary": "Menghapus pertandingan",
+                "description": "Hanya dapat diakses Admin dan Panitia. Penghapusan bersifat permanen.",
+                "operationId": "deletePertandingan",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pertandingan berhasil dihapus"
+                    },
+                    "401": {
+                        "description": "Belum login atau token tidak valid"
+                    },
+                    "403": {
+                        "description": "Hanya Admin dan Panitia yang dapat mengakses endpoint ini"
+                    },
+                    "404": {
+                        "description": "Pertandingan tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Admin dan Panitia - Pertandingan"
+                ],
+                "summary": "Mengubah data pertandingan",
+                "description": "Hanya dapat diakses Admin dan Panitia. Semua field body bersifat opsional; kirim field yang ingin diubah.",
+                "operationId": "updatePertandingan",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "id_lomba": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "id_jadwal": {
+                                        "type": "integer",
+                                        "example": 4,
+                                        "nullable": true
+                                    },
+                                    "peserta_1": {
+                                        "type": "string",
+                                        "example": "Ketoprak Sedap Malam"
+                                    },
+                                    "peserta_2": {
+                                        "type": "string",
+                                        "example": "Nasi Padang Murah"
+                                    },
+                                    "babak": {
+                                        "type": "string",
+                                        "example": "Semifinal",
+                                        "nullable": true
+                                    },
+                                    "tanggal": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-11-09"
+                                    },
+                                    "waktu_mulai": {
+                                        "type": "string",
+                                        "example": "15:00"
+                                    },
+                                    "waktu_selesai": {
+                                        "type": "string",
+                                        "example": "16:00",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Dijadwalkan",
+                                            "Berlangsung",
+                                            "Selesai"
+                                        ],
+                                        "example": "Selesai"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pertandingan berhasil diperbarui"
+                    },
+                    "401": {
+                        "description": "Belum login atau token tidak valid"
+                    },
+                    "403": {
+                        "description": "Hanya Admin dan Panitia yang dapat mengakses endpoint ini"
+                    },
+                    "404": {
+                        "description": "Pertandingan tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Data tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/admin/rt": {
             "get": {
                 "tags": [
@@ -1995,12 +2925,8 @@
             "description": "Beranda Warga"
         },
         {
-            "name": "Dashboard Admin",
-            "description": "Dashboard Admin"
-        },
-        {
-            "name": "Dashboard Panitia",
-            "description": "Dashboard Panitia"
+            "name": "Dashboard",
+            "description": "Dashboard"
         },
         {
             "name": "Dashboard Warga",
@@ -2021,6 +2947,18 @@
         {
             "name": "Warga - Pendaftaran",
             "description": "Warga - Pendaftaran"
+        },
+        {
+            "name": "Admin - Pendaftaran",
+            "description": "Admin - Pendaftaran"
+        },
+        {
+            "name": "Panitia - Pendaftaran",
+            "description": "Panitia - Pendaftaran"
+        },
+        {
+            "name": "Admin dan Panitia - Pertandingan",
+            "description": "Admin dan Panitia - Pertandingan"
         },
         {
             "name": "Admin - Data RT",

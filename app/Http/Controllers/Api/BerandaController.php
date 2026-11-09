@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ class BerandaController extends Controller
      *     operationId="getBerandaWarga",
      *     tags={"Beranda Warga"},
      *     summary="Menampilkan data beranda warga",
-     *     description="Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung.",
+     *     description="Mengambil banner, agenda pada tanggal yang dipilih, tanggal agenda yang tersedia, pengumuman terbaru, dan pertandingan yang benar-benar sedang berlangsung saat ini.",
      *     security={{"sanctum":{}}},
      *
      *     @OA\Parameter(
@@ -47,7 +48,7 @@ class BerandaController extends Controller
      *                     @OA\Property(property="id_periode", type="integer", example=1),
      *                     @OA\Property(property="judul", type="string", example="Semarak HUT RI ke-81"),
      *                     @OA\Property(property="tahun", type="string", example="2026"),
-     *                     @OA\Property(property="deskripsi", type="string", example="Nusantara Bersuka, Indonesia Berjaya"),
+     *                     @OA\Property(property="deskripsi", type="string", nullable=true, example="Nusantara Bersuka, Indonesia Berjaya"),
      *                     @OA\Property(property="logo", type="string", nullable=true)
      *                 ),
      *
@@ -56,6 +57,12 @@ class BerandaController extends Controller
      *                     type="string",
      *                     format="date",
      *                     example="2026-08-15"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="tanggal_tersedia",
+     *                     type="array",
+     *                     description="Daftar tanggal yang memiliki jadwal lomba pada periode aktif",
+     *                     @OA\Items(type="string", format="date", example="2026-08-15")
      *                 ),
      *
      *                 @OA\Property(
@@ -67,9 +74,9 @@ class BerandaController extends Controller
      *                         @OA\Property(property="nama_lomba", type="string", example="Tarik Tambang"),
      *                         @OA\Property(property="nama_kategori", type="string", example="Dewasa"),
      *                         @OA\Property(property="tanggal", type="string", format="date", example="2026-08-15"),
-     *                         @OA\Property(property="waktu_mulai", type="string", example="09:00:00"),
-     *                         @OA\Property(property="waktu_selesai", type="string", example="11:00:00"),
-     *                         @OA\Property(property="lokasi", type="string", example="Lapangan Timur")
+     *                         @OA\Property(property="waktu_mulai", type="string", nullable=true, example="09:00:00"),
+     *                         @OA\Property(property="waktu_selesai", type="string", nullable=true, example="11:00:00"),
+     *                         @OA\Property(property="lokasi", type="string", nullable=true, example="Lapangan Timur")
      *                     )
      *                 ),
      *
@@ -86,7 +93,7 @@ class BerandaController extends Controller
      *                 @OA\Property(
      *                     property="sedang_berlangsung",
      *                     type="array",
-     *                     description="Daftar pertandingan yang berstatus Berlangsung",
+     *                     description="Daftar pertandingan berstatus Berlangsung yang tanggal dan waktunya mencakup waktu saat ini di Asia/Jakarta",
      *                     @OA\Items(
      *                         @OA\Property(property="id_pertandingan", type="integer", example=1),
      *                         @OA\Property(property="id_lomba", type="integer", example=1),
@@ -111,10 +118,12 @@ class BerandaController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $now = CarbonImmutable::now('Asia/Jakarta');
+
         // 1. Ambil dan validasi tanggal
         $tanggal = $request->query(
             'tanggal',
-            now()->toDateString()
+            $now->toDateString()
         );
 
         $request->merge(['tanggal' => $tanggal]);
@@ -143,12 +152,11 @@ class BerandaController extends Controller
                 '=',
                 'k.id_kategori'
             )
-            ->when($periode, function ($query) use ($periode) {
-                $query->where(
-                    'l.id_periode',
-                    $periode->id_periode
-                );
-            })
+            ->when(
+                $periode,
+                fn ($query) => $query->where('l.id_periode', $periode->id_periode),
+                fn ($query) => $query->whereRaw('1 = 0')
+            )
             ->whereDate('j.tanggal', $tanggal)
             ->where('l.status', 'Dibuka')
             ->orderBy('j.waktu_mulai')
@@ -163,6 +171,21 @@ class BerandaController extends Controller
                 'j.lokasi'
             )
             ->get();
+
+        // Tanggal untuk tab agenda diambil dari data jadwal, bukan ditetapkan di frontend.
+        $tanggalTersedia = DB::table('jadwal_lomba as j')
+            ->join('lomba as l', 'j.id_lomba', '=', 'l.id_lomba')
+            ->when(
+                $periode,
+                fn ($query) => $query->where('l.id_periode', $periode->id_periode),
+                fn ($query) => $query->whereRaw('1 = 0')
+            )
+            ->where('l.status', 'Dibuka')
+            ->distinct()
+            ->orderBy('j.tanggal')
+            ->pluck('j.tanggal')
+            ->map(fn ($date) => CarbonImmutable::parse($date, 'Asia/Jakarta')->format('Y-m-d'))
+            ->values();
 
         // 4. Ambil pengumuman terbaru
         $pengumuman = null;
@@ -192,11 +215,17 @@ class BerandaController extends Controller
                 'j.id_jadwal'
             )
             ->where('p.status', 'Berlangsung')
-            ->when($periode, function ($query) use ($periode) {
-                $query->where(
-                    'l.id_periode',
-                    $periode->id_periode
-                );
+            ->where('l.status', '!=', 'Nonaktif')
+            ->when(
+                $periode,
+                fn ($query) => $query->where('l.id_periode', $periode->id_periode),
+                fn ($query) => $query->whereRaw('1 = 0')
+            )
+            ->whereDate('p.waktu_mulai', $now->toDateString())
+            ->where('p.waktu_mulai', '<=', $now->format('Y-m-d H:i:s'))
+            ->where(function ($query) use ($now) {
+                $query->whereNull('p.waktu_selesai')
+                    ->orWhere('p.waktu_selesai', '>=', $now->format('Y-m-d H:i:s'));
             })
             ->select(
                 'p.id_pertandingan',
@@ -204,6 +233,7 @@ class BerandaController extends Controller
                 'l.nama_lomba',
                 'p.peserta_1',
                 'p.peserta_2',
+                'p.babak',
                 'p.waktu_mulai',
                 'p.waktu_selesai',
                 'p.status',
@@ -226,6 +256,7 @@ class BerandaController extends Controller
                 ] : null,
 
                 'tanggal_filter' => $tanggal,
+                'tanggal_tersedia' => $tanggalTersedia,
 
                 'jadwal_agenda' => $jadwal,
 
