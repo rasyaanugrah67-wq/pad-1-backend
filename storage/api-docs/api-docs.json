@@ -90,7 +90,7 @@
                     "Authentication"
                 ],
                 "summary": "Mengambil data pengguna yang sedang login",
-                "description": "Mengambil informasi akun berdasarkan token Sanctum.",
+                "description": "Mengambil informasi akun dan profil warga berdasarkan token Sanctum.",
                 "operationId": "b5de204f5e452ef51327c691aa99e77c",
                 "responses": {
                     "200": {
@@ -425,238 +425,6 @@
                     },
                     "403": {
                         "description": "Akses ditolak"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/warga/iuran": {
-            "get": {
-                "tags": [
-                    "Warga - Iuran & Pembayaran"
-                ],
-                "summary": "Melihat daftar iuran warga",
-                "description": "Mengambil daftar tagihan iuran milik warga login. Mendukung filter status iuran (Semua, Belum Bayar, Sudah Bayar).",
-                "operationId": "getDaftarIuranWarga",
-                "parameters": [
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "description": "Filter status pembayaran iuran",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "Semua",
-                                "Belum Bayar",
-                                "Sudah Bayar"
-                            ]
-                        },
-                        "example": "Belum Bayar"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Daftar iuran berhasil diambil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Daftar tagihan iuran berhasil diambil."
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated"
-                    },
-                    "403": {
-                        "description": "Akses ditolak (Bukan warga)"
-                    },
-                    "422": {
-                        "description": "Filter status tidak valid"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/warga/iuran/{id_iuran}": {
-            "get": {
-                "tags": [
-                    "Warga - Iuran & Pembayaran"
-                ],
-                "summary": "Melihat detail iuran warga",
-                "description": "Menampilkan detail satu tagihan iuran dan riwayat pengajuan pembayarannya. Hanya dapat diakses oleh pemilik iuran.",
-                "operationId": "getDetailIuranWarga",
-                "parameters": [
-                    {
-                        "name": "id_iuran",
-                        "in": "path",
-                        "description": "ID tagihan iuran",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "example": 1
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Detail iuran berhasil diambil",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Detail iuran berhasil diambil."
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated"
-                    },
-                    "403": {
-                        "description": "Akses ditolak (Bukan warga)"
-                    },
-                    "404": {
-                        "description": "Iuran tidak ditemukan atau bukan milik warga"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/warga/iuran/{id_iuran}/pembayaran": {
-            "post": {
-                "tags": [
-                    "Warga - Iuran & Pembayaran"
-                ],
-                "summary": "Mengajukan pembayaran iuran",
-                "description": "Mengirim nominal, metode pembayaran, dan berkas foto bukti bayar. Pengajuan pembayaran berstatus awal Menunggu dan tidak langsung mengubah status iuran menjadi lunas.",
-                "operationId": "ajukanPembayaranIuranWarga",
-                "parameters": [
-                    {
-                        "name": "id_iuran",
-                        "in": "path",
-                        "description": "ID tagihan iuran yang ingin dibayar",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "example": 1
-                    }
-                ],
-                "requestBody": {
-                    "description": "Data pengajuan pembayaran iuran dan berkas bukti",
-                    "required": true,
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "required": [
-                                    "metode",
-                                    "nominal",
-                                    "bukti_bayar"
-                                ],
-                                "properties": {
-                                    "metode": {
-                                        "description": "Metode pembayaran",
-                                        "type": "string",
-                                        "maxLength": 50,
-                                        "example": "Transfer Bank BCA"
-                                    },
-                                    "nominal": {
-                                        "description": "Nominal yang dibayarkan (harus sama persis dengan tagihan iuran)",
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 50000
-                                    },
-                                    "bukti_bayar": {
-                                        "description": "Berkas gambar bukti transfer (jpeg, png, jpg, webp maks 2MB)",
-                                        "type": "string",
-                                        "format": "binary"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Pembayaran berhasil diajukan dan sedang menunggu verifikasi panitia",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Pembayaran iuran berhasil diajukan dan sedang menunggu verifikasi panitia."
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated"
-                    },
-                    "403": {
-                        "description": "Akses ditolak (Bukan warga)"
-                    },
-                    "404": {
-                        "description": "Data iuran tidak ditemukan"
-                    },
-                    "409": {
-                        "description": "Pengajuan pembayaran sebelumnya masih menunggu verifikasi panitia"
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity - Nominal tidak cocok, iuran sudah lunas, atau berkas tidak valid"
                     }
                 },
                 "security": [
@@ -1416,6 +1184,469 @@
                 ]
             }
         },
+        "/api/admin/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Melihat seluruh pendaftaran",
+                "description": "Menampilkan seluruh pendaftaran.",
+                "operationId": "adminDaftarPendaftaran",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Menunggu",
+                                "Diterima",
+                                "Ditolak"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_lomba",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pendaftaran berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Melihat seluruh pendaftaran",
+                "operationId": "panitiaDaftarPendaftaran",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Menunggu",
+                                "Diterima",
+                                "Ditolak"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_lomba",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pendaftaran berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/pendaftaran/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Melihat detail pendaftaran",
+                "description": "Melihat detail pendaftaran.",
+                "operationId": "adminDetailPendaftaran",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail pendaftaran berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/pendaftaran/{id}": {
+            "get": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Melihat detail pendaftaran",
+                "operationId": "panitiaDetailPendaftaran",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail pendaftaran berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/pendaftaran/{id}/status": {
+            "patch": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Mengubah status pendaftaran",
+                "description": "Mengubah status pendaftaran.",
+                "operationId": "adminUbahStatusPendaftaran",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Menunggu",
+                                            "Diterima",
+                                            "Ditolak"
+                                        ],
+                                        "example": "Diterima"
+                                    },
+                                    "catatan": {
+                                        "type": "string",
+                                        "example": "Persyaratan belum lengkap",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status pendaftaran berhasil diperbarui"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/pendaftaran/{id}/status": {
+            "patch": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Mengubah status pendaftaran",
+                "operationId": "panitiaUbahStatusPendaftaran",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Menunggu",
+                                            "Diterima",
+                                            "Ditolak"
+                                        ],
+                                        "example": "Diterima"
+                                    },
+                                    "catatan": {
+                                        "type": "string",
+                                        "example": "Persyaratan belum lengkap",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status pendaftaran berhasil diperbarui"
+                    },
+                    "404": {
+                        "description": "Pendaftaran tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/lomba/{id}/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Melihat daftar pendaftar pada lomba tertentu",
+                "description": "Melihat pendaftar pada lomba tertentu.",
+                "operationId": "adminPendaftarPerLomba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Menunggu",
+                                "Diterima",
+                                "Ditolak"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pendaftar berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/lomba/{id}/pendaftaran": {
+            "get": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Melihat daftar pendaftar pada lomba tertentu",
+                "operationId": "panitiaPendaftarPerLomba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Menunggu",
+                                "Diterima",
+                                "Ditolak"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar pendaftar berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/lomba/{id}/kuota": {
+            "get": {
+                "tags": [
+                    "Admin - Pendaftaran"
+                ],
+                "summary": "Melihat penggunaan kuota lomba",
+                "description": "Melihat kuota lomba.",
+                "operationId": "adminKuotaLomba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Informasi kuota berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/panitia/lomba/{id}/kuota": {
+            "get": {
+                "tags": [
+                    "Panitia - Pendaftaran"
+                ],
+                "summary": "Melihat penggunaan kuota lomba",
+                "operationId": "panitiaKuotaLomba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Informasi kuota berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/admin/rt": {
             "get": {
                 "tags": [
@@ -2007,10 +2238,6 @@
             "description": "Dashboard Warga"
         },
         {
-            "name": "Warga - Iuran & Pembayaran",
-            "description": "Warga - Iuran & Pembayaran"
-        },
-        {
             "name": "Warga - Lomba",
             "description": "Warga - Lomba"
         },
@@ -2021,6 +2248,14 @@
         {
             "name": "Warga - Pendaftaran",
             "description": "Warga - Pendaftaran"
+        },
+        {
+            "name": "Admin - Pendaftaran",
+            "description": "Admin - Pendaftaran"
+        },
+        {
+            "name": "Panitia - Pendaftaran",
+            "description": "Panitia - Pendaftaran"
         },
         {
             "name": "Admin - Data RT",

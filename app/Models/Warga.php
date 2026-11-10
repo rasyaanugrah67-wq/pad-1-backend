@@ -17,6 +17,7 @@ class Warga extends Model
         'id_rt',
         'nik',
         'nama',
+        'tempat_lahir',
         'no_hp',
         'alamat',
         'jenis_kelamin',

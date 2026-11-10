@@ -13,48 +13,25 @@ use OpenApi\Annotations as OA;
 class AuthController extends Controller
 {
     /**
- * @OA\Post(
- *     path="/api/auth/login",
- *     summary="Login pengguna",
- *     description="Login menggunakan username dan password untuk mendapatkan token Sanctum.",
- *     tags={"Authentication"},
- *
- *     @OA\RequestBody(
- *         required=true,
- *         @OA\JsonContent(
- *             required={"username","password"},
- *             @OA\Property(
- *                 property="username",
- *                 type="string",
- *                 example="admin"
- *             ),
- *             @OA\Property(
- *                 property="password",
- *                 type="string",
- *                 format="password",
- *                 example="Admin123!"
- *             )
- *         )
- *     ),
- *
- *     @OA\Response(
- *         response=200,
- *         description="Login berhasil"
- *     ),
- *     @OA\Response(
- *         response=401,
- *         description="Username atau password salah"
- *     ),
- *     @OA\Response(
- *         response=403,
- *         description="Akun tidak aktif"
- *     ),
- *     @OA\Response(
- *         response=422,
- *         description="Validasi gagal"
- *     )
- * )
- */
+     * @OA\Post(
+     *     path="/api/auth/login",
+     *     summary="Login pengguna",
+     *     description="Login menggunakan username dan password untuk mendapatkan token Sanctum.",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"username","password"},
+     *             @OA\Property(property="username", type="string", example="admin"),
+     *             @OA\Property(property="password", type="string", format="password", example="Admin123!")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Login berhasil"),
+     *     @OA\Response(response=401, description="Username atau password salah"),
+     *     @OA\Response(response=403, description="Akun tidak aktif"),
+     *     @OA\Response(response=422, description="Validasi gagal")
+     * )
+     */
     public function login(LoginRequest $request): JsonResponse
     {
         $akun = Akun::with([
@@ -95,38 +72,25 @@ class AuthController extends Controller
             'last_login' => now(),
         ]);
 
-        /*
-         * Opsional:
-         * hapus token sebelumnya supaya satu akun
-         * hanya memiliki satu session API.
-         */
-
-        // $akun->tokens()->delete();
-
         $token = $akun->createToken('auth-token')->plainTextToken;
 
         return response()->json([
             'success' => true,
             'message' => 'Login berhasil.',
-
             'data' => [
                 'token' => $token,
                 'token_type' => 'Bearer',
-
                 'akun' => [
                     'id_akun' => $akun->id_akun,
                     'username' => $akun->username,
-
                     'role' => [
                         'id_role' => $akun->role->id_role,
                         'nama_role' => $akun->role->nama_role,
                     ],
-
                     'warga' => [
                         'id_warga' => $akun->warga->id_warga,
                         'nama' => $akun->warga->nama,
                     ],
-
                     'last_login' => $akun->last_login,
                 ],
             ],
@@ -134,24 +98,16 @@ class AuthController extends Controller
     }
 
     /**
- * @OA\Post(
- *     path="/api/auth/logout",
- *     summary="Logout pengguna",
- *     description="Menghapus token Sanctum yang sedang digunakan.",
- *     tags={"Authentication"},
- *     security={{"sanctum":{}}},
- *
- *     @OA\Response(
- *         response=200,
- *         description="Logout berhasil"
- *     ),
- *
- *     @OA\Response(
- *         response=401,
- *         description="Unauthenticated"
- *     )
- * )
- */
+     * @OA\Post(
+     *     path="/api/auth/logout",
+     *     summary="Logout pengguna",
+     *     description="Menghapus token Sanctum yang sedang digunakan.",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Logout berhasil"),
+     *     @OA\Response(response=401, description="Unauthenticated")
+     * )
+     */
     public function logout(Request $request): JsonResponse
     {
         $request->user()
@@ -165,24 +121,16 @@ class AuthController extends Controller
     }
 
     /**
- * @OA\Get(
- *     path="/api/auth/me",
- *     summary="Mengambil data pengguna yang sedang login",
- *     description="Mengambil informasi akun berdasarkan token Sanctum.",
- *     tags={"Authentication"},
- *     security={{"sanctum":{}}},
- *
- *     @OA\Response(
- *         response=200,
- *         description="Data pengguna berhasil diambil"
- *     ),
- *
- *     @OA\Response(
- *         response=401,
- *         description="Unauthenticated"
- *     )
- * )
- */
+     * @OA\Get(
+     *     path="/api/auth/me",
+     *     summary="Mengambil data pengguna yang sedang login",
+     *     description="Mengambil informasi akun dan profil warga berdasarkan token Sanctum.",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Data pengguna berhasil diambil"),
+     *     @OA\Response(response=401, description="Unauthenticated")
+     * )
+     */
     public function me(Request $request): JsonResponse
     {
         $akun = $request->user()->load([
@@ -190,24 +138,44 @@ class AuthController extends Controller
             'warga.rt.rw',
         ]);
 
+        $warga = $akun->warga;
+        $rt = $warga?->rt;
+        $rw = $rt?->rw;
+
         return response()->json([
             'success' => true,
-
+            'message' => 'Data pengguna berhasil diambil.',
             'data' => [
                 'id_akun' => $akun->id_akun,
                 'username' => $akun->username,
                 'status' => $akun->status,
+                'last_login' => $akun->last_login,
 
                 'role' => [
-                    'id_role' => $akun->role->id_role,
-                    'nama_role' => $akun->role->nama_role,
+                    'id_role' => $akun->role?->id_role,
+                    'nama_role' => $akun->role?->nama_role,
                 ],
 
-                'warga' => [
-                    'id_warga' => $akun->warga->id_warga,
-                    'nama' => $akun->warga->nama,
-                    'no_hp' => $akun->warga->no_hp,
-                ],
+                'warga' => $warga ? [
+                    'id_warga' => $warga->id_warga,
+                    'nama' => $warga->nama,
+                    'tempat_lahir' => $warga->tempat_lahir,
+                    'tanggal_lahir' => $warga->tanggal_lahir
+                        ? $warga->tanggal_lahir->format('Y-m-d')
+                        : null,
+                    'no_hp' => $warga->no_hp,
+                    'alamat' => $warga->alamat,
+
+                    'rt' => $rt ? [
+                        'id_rt' => $rt->id_rt,
+                        'nomor_rt' => $rt->nomor_rt,
+                    ] : null,
+
+                    'rw' => $rw ? [
+                        'id_rw' => $rw->id_rw,
+                        'nomor_rw' => $rw->nomor_rw,
+                    ] : null,
+                ] : null,
             ],
         ]);
     }

@@ -19,6 +19,8 @@ class Pembayaran extends Model
         'nominal',
         'metode',
         'bukti_bayar',
+        'cloudinary_public_id',
+        'cloudinary_format',
         'status_verifikasi',
         'diverifikasi_oleh',
         'tanggal_verifikasi',
@@ -36,7 +38,21 @@ class Pembayaran extends Model
 
     public function getBuktiBayarUrlAttribute(): ?string
     {
-        return $this->bukti_bayar ? asset('storage/' . $this->bukti_bayar) : null;
+        if (!$this->bukti_bayar) {
+            return null;
+        }
+
+        // Bukti Cloudinary harus diakses melalui endpoint terproteksi.
+        if ($this->cloudinary_public_id) {
+            return url('/api/pembayaran/' . $this->id_pembayaran . '/bukti');
+        }
+
+        // Kompatibilitas dengan data lama.
+        if (filter_var($this->bukti_bayar, FILTER_VALIDATE_URL)) {
+            return $this->bukti_bayar;
+        }
+
+        return asset('storage/' . $this->bukti_bayar);
     }
 
     public function iuran(): BelongsTo
@@ -49,4 +65,3 @@ class Pembayaran extends Model
         return $this->belongsTo(Akun::class, 'diverifikasi_oleh', 'id_akun');
     }
 }
-

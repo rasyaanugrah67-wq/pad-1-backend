@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BerandaController;
 use App\Http\Controllers\Api\LombaController;
@@ -12,6 +13,8 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\WargaController;
 use App\Http\Controllers\Api\RtController;
 use App\Http\Controllers\Api\RwController;
+use App\Http\Controllers\Api\ProfilController;
+
 
 // ==============================
 // AUTHENTICATION
@@ -50,22 +53,20 @@ Route::middleware([
     'role:Admin',
 ])->prefix('admin')->group(function () {
 
-    // Dashboard Admin
     Route::get('/dashboard', [
         DashboardController::class,
         'admin'
     ]);
 
-    // AD-01: Data Warga
     Route::apiResource('warga', WargaController::class);
 
-    // AD-01: Data RT
     Route::apiResource('rt', RtController::class);
 
-    // AD-01: Data RW
     Route::apiResource('rw', RwController::class);
 
+
     // PB-04: Pengelolaan Pendaftaran
+
     Route::get('/pendaftaran', [
         PendaftaranManagementController::class,
         'index'
@@ -109,6 +110,7 @@ Route::middleware([
     ]);
 
     // PB-04: Pengelolaan Pendaftaran
+
     Route::get('/pendaftaran', [
         PendaftaranManagementController::class,
         'index'
@@ -146,19 +148,20 @@ Route::middleware([
     'role:Warga',
 ])->prefix('warga')->group(function () {
 
-    // Dashboard
     Route::get('/dashboard', [
         DashboardController::class,
         'warga'
     ]);
 
     // PB-02: Beranda
+
     Route::get('/beranda', [
         BerandaController::class,
         'index'
     ]);
 
     // PB-03: Lomba
+
     Route::get('/lomba', [
         LombaController::class,
         'index'
@@ -170,6 +173,7 @@ Route::middleware([
     ])->whereNumber('id');
 
     // PB-04: Pendaftaran
+
     Route::get('/pendaftaran', [
         PendaftaranController::class,
         'index'
@@ -190,10 +194,16 @@ Route::middleware([
         'destroy'
     ])->whereNumber('id');
 
-    // PB-05: Iuran
+    // PB-05: Iuran Pribadi
+
     Route::get('/iuran', [
         IuranController::class,
         'index'
+    ]);
+
+    Route::get('/iuran/transparansi', [
+        IuranController::class,
+        'transparansi'
     ]);
 
     Route::get('/iuran/{id_iuran}', [
@@ -207,6 +217,7 @@ Route::middleware([
     ])->whereNumber('id_iuran');
 
     // PB-06: Notifikasi
+
     Route::get('/notifikasi', [
         NotifikasiController::class,
         'index'
@@ -225,6 +236,23 @@ Route::middleware([
     Route::patch('/notifikasi/read-all', [
         NotifikasiController::class,
         'markAllAsRead'
+    ]);
+
+    // PB-07: Profil Warga
+
+    Route::put('/profil', [
+        ProfilController::class,
+        'update'
+    ]);
+
+    Route::put('/username', [
+        ProfilController::class,
+        'updateUsername'
+    ]);
+
+    Route::put('/ubah-password', [
+        ProfilController::class,
+        'updatePassword'
     ]);
 
 });
@@ -246,3 +274,16 @@ Route::middleware([
     });
 
 });
+
+
+// ==============================
+// AKSES BUKTI PEMBAYARAN
+// ==============================
+// Admin dan Panitia dapat mengakses semua bukti.
+// Warga hanya dapat mengakses bukti miliknya sendiri.
+// Pemeriksaan kepemilikan dilakukan di IuranController.
+
+Route::middleware('auth:sanctum')->get(
+    '/pembayaran/{id_pembayaran}/bukti',
+    [IuranController::class, 'buktiBayar']
+)->whereNumber('id_pembayaran');

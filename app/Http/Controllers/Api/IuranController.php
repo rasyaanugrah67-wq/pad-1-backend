@@ -6,47 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Iuran;
 use App\Models\Notifikasi;
 use App\Models\Pembayaran;
+use Cloudinary\Cloudinary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class IuranController extends Controller
 {
-
-
     /**
-     * PB-05: Mengambil daftar iuran milik warga yang sedang login.
-     *
-     * @OA\Get(
-     *     path="/api/warga/iuran",
-     *     operationId="getDaftarIuranWarga",
-     *     tags={"Warga - Iuran & Pembayaran"},
-     *     summary="Melihat daftar iuran warga",
-     *     description="Mengambil daftar tagihan iuran milik warga login. Mendukung filter status iuran (Semua, Belum Bayar, Sudah Bayar).",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="status",
-     *         in="query",
-     *         required=false,
-     *         description="Filter status pembayaran iuran",
-     *         @OA\Schema(type="string", enum={"Semua","Belum Bayar","Sudah Bayar"}),
-     *         example="Belum Bayar"
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Daftar iuran berhasil diambil",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Daftar tagihan iuran berhasil diambil."),
-     *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
-     *         )
-     *     ),
-     *     @OA\Response(response=401, description="Unauthenticated"),
-     *     @OA\Response(response=403, description="Akses ditolak (Bukan warga)"),
-     *     @OA\Response(response=422, description="Filter status tidak valid")
-     * )
+     * Mengambil daftar iuran milik warga yang login.
      */
     public function index(Request $request): JsonResponse
     {
@@ -74,8 +44,7 @@ class IuranController extends Controller
             'pembayaran' => function ($q) {
                 $q->orderByDesc('created_at');
             },
-        ])
-            ->where('id_warga', $idWarga);
+        ])->where('id_warga', $idWarga);
 
         if ($status === 'Belum Bayar') {
             $query->where('status', 'Belum Bayar');
@@ -95,43 +64,12 @@ class IuranController extends Controller
         ]);
     }
 
-    
     /**
-     * PB-05: Mengambil detail satu iuran milik warga yang sedang login.
-     *
-     * @OA\Get(
-     *     path="/api/warga/iuran/{id_iuran}",
-     *     operationId="getDetailIuranWarga",
-     *     tags={"Warga - Iuran & Pembayaran"},
-     *     summary="Melihat detail iuran warga",
-     *     description="Menampilkan detail satu tagihan iuran dan riwayat pengajuan pembayarannya. Hanya dapat diakses oleh pemilik iuran.",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id_iuran",
-     *         in="path",
-     *         required=true,
-     *         description="ID tagihan iuran",
-     *         @OA\Schema(type="integer"),
-     *         example=1
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Detail iuran berhasil diambil",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Detail iuran berhasil diambil."),
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(response=401, description="Unauthenticated"),
-     *     @OA\Response(response=403, description="Akses ditolak (Bukan warga)"),
-     *     @OA\Response(response=404, description="Iuran tidak ditemukan atau bukan milik warga")
-     * )
+     * Mengambil detail iuran milik warga yang login.
      */
     public function show(Request $request, int $id_iuran): JsonResponse
     {
-        $akun = $request->user();
-        $idWarga = $akun->id_warga;
+        $idWarga = $request->user()->id_warga;
 
         if (!$idWarga) {
             return response()->json([
@@ -143,9 +81,11 @@ class IuranController extends Controller
         $iuran = Iuran::with([
             'periode',
             'pembayaran' => function ($q) {
-                $q->with(['verifikator' => function ($v) {
-                    $v->select('id_akun', 'username');
-                }])->orderByDesc('created_at');
+                $q->with([
+                    'verifikator' => function ($v) {
+                        $v->select('id_akun', 'username');
+                    },
+                ])->orderByDesc('created_at');
             },
         ])
             ->where('id_iuran', $id_iuran)
@@ -166,53 +106,8 @@ class IuranController extends Controller
         ]);
     }
 
-    
     /**
-     * PB-05: Mengajukan pembayaran untuk suatu tagihan iuran.
-     *
-     * @OA\Post(
-     *     path="/api/warga/iuran/{id_iuran}/pembayaran",
-     *     operationId="ajukanPembayaranIuranWarga",
-     *     tags={"Warga - Iuran & Pembayaran"},
-     *     summary="Mengajukan pembayaran iuran",
-     *     description="Mengirim nominal, metode pembayaran, dan berkas foto bukti bayar. Pengajuan pembayaran berstatus awal Menunggu dan tidak langsung mengubah status iuran menjadi lunas.",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id_iuran",
-     *         in="path",
-     *         required=true,
-     *         description="ID tagihan iuran yang ingin dibayar",
-     *         @OA\Schema(type="integer"),
-     *         example=1
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         description="Data pengajuan pembayaran iuran dan berkas bukti",
-     *         @OA\MediaType(
-     *             mediaType="multipart/form-data",
-     *             @OA\Schema(
-     *                 required={"metode","nominal","bukti_bayar"},
-     *                 @OA\Property(property="metode", type="string", maxLength=50, example="Transfer Bank BCA", description="Metode pembayaran"),
-     *                 @OA\Property(property="nominal", type="number", format="float", example=50000, description="Nominal yang dibayarkan (harus sama persis dengan tagihan iuran)"),
-     *                 @OA\Property(property="bukti_bayar", type="string", format="binary", description="Berkas gambar bukti transfer (jpeg, png, jpg, webp maks 2MB)")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Pembayaran berhasil diajukan dan sedang menunggu verifikasi panitia",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Pembayaran iuran berhasil diajukan dan sedang menunggu verifikasi panitia."),
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(response=401, description="Unauthenticated"),
-     *     @OA\Response(response=403, description="Akses ditolak (Bukan warga)"),
-     *     @OA\Response(response=404, description="Data iuran tidak ditemukan"),
-     *     @OA\Response(response=409, description="Pengajuan pembayaran sebelumnya masih menunggu verifikasi panitia"),
-     *     @OA\Response(response=422, description="Unprocessable Entity - Nominal tidak cocok, iuran sudah lunas, atau berkas tidak valid")
-     * )
+     * Mengajukan pembayaran dan mengunggah bukti ke Cloudinary.
      */
     public function bayar(Request $request, int $id_iuran): JsonResponse
     {
@@ -226,7 +121,6 @@ class IuranController extends Controller
             ], 403);
         }
 
-        // Cari iuran dan pastikan milik warga yang login
         $iuran = Iuran::where('id_iuran', $id_iuran)
             ->where('id_warga', $idWarga)
             ->first();
@@ -238,7 +132,6 @@ class IuranController extends Controller
             ], 404);
         }
 
-        // Cek jika status iuran sudah lunas
         if ($iuran->status === 'Sudah Bayar') {
             return response()->json([
                 'success' => false,
@@ -246,8 +139,10 @@ class IuranController extends Controller
             ], 422);
         }
 
-        // Cek apakah ada pengajuan pembayaran sebelumnya yang masih menunggu verifikasi
-        $menungguVerifikasi = Pembayaran::where('id_iuran', $iuran->id_iuran)
+        $menungguVerifikasi = Pembayaran::where(
+            'id_iuran',
+            $iuran->id_iuran
+        )
             ->where('status_verifikasi', 'Menunggu')
             ->exists();
 
@@ -258,51 +153,299 @@ class IuranController extends Controller
             ], 409);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'metode' => ['required', 'string', 'max:50'],
             'nominal' => ['required', 'numeric', 'min:1'],
-            'bukti_bayar' => ['required', 'file', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'bukti_bayar' => [
+                'required',
+                'image',
+                'mimes:jpeg,png,jpg,webp',
+                'max:2048',
+            ],
         ]);
 
-        // Pastikan nominal pembayaran sama dengan tagihan iuran
-        if (round((float) $request->nominal, 2) !== round((float) $iuran->nominal, 2)) {
+        if (
+            round((float) $validated['nominal'], 2) !==
+            round((float) $iuran->nominal, 2)
+        ) {
             return response()->json([
                 'success' => false,
-                'message' => 'Nominal pembayaran harus sesuai dengan tagihan iuran (Rp ' . number_format($iuran->nominal, 0, ',', '.') . ').',
+                'message' => 'Nominal pembayaran harus sesuai dengan tagihan iuran (Rp ' .
+                    number_format($iuran->nominal, 0, ',', '.') . ').',
             ], 422);
         }
 
-        // Simpan file bukti bayar ke disk 'public'
-        $path = $request->file('bukti_bayar')->store('bukti_bayar', 'public');
+        $cloudinary = null;
+        $publicId = null;
 
-        $pembayaran = DB::transaction(function () use ($iuran, $request, $path, $idWarga) {
-            $p = Pembayaran::create([
+        try {
+            $cloudinary = new Cloudinary();
+
+            $upload = $cloudinary->uploadApi()->upload(
+                $request->file('bukti_bayar')->getRealPath(),
+                [
+                    'folder' => 'pad/bukti-pembayaran',
+                    'resource_type' => 'image',
+                    'type' => 'authenticated',
+                ]
+            );
+
+            $publicId = $upload['public_id'];
+            $secureUrl = $upload['secure_url'];
+            $format = $upload['format'];
+
+            $pembayaran = DB::transaction(function () use (
+                $iuran,
+                $validated,
+                $idWarga,
+                $publicId,
+                $secureUrl,
+                $format
+            ) {
+                $p = Pembayaran::create([
+                    'id_iuran' => $iuran->id_iuran,
+                    'tanggal_bayar' => now(),
+                    'nominal' => $iuran->nominal,
+                    'metode' => $validated['metode'],
+                    'bukti_bayar' => $secureUrl,
+                    'cloudinary_public_id' => $publicId,
+                    'cloudinary_format' => $format,
+                    'status_verifikasi' => 'Menunggu',
+                    'diverifikasi_oleh' => null,
+                    'tanggal_verifikasi' => null,
+                ]);
+
+                Notifikasi::create([
+                    'id_warga' => $idWarga,
+                    'judul' => 'Pengajuan Pembayaran Iuran',
+                    'pesan' => 'Pembayaran iuran sebesar Rp ' .
+                        number_format($iuran->nominal, 0, ',', '.') .
+                        ' berhasil diajukan dan sedang menunggu verifikasi panitia.',
+                    'tipe' => 'Iuran',
+                    'status_baca' => false,
+                ]);
+
+                return $p;
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran iuran berhasil diajukan dan sedang menunggu verifikasi panitia.',
+                'data' => $pembayaran,
+            ], 201);
+
+        } catch (Throwable $e) {
+            if ($cloudinary && $publicId) {
+                try {
+                    $cloudinary->uploadApi()->destroy($publicId, [
+                        'resource_type' => 'image',
+                        'type' => 'authenticated',
+                    ]);
+                } catch (Throwable $cleanupError) {
+                    report($cleanupError);
+                }
+            }
+
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengajukan pembayaran. Silakan coba kembali.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Mengakses bukti pembayaran dengan pemeriksaan hak akses.
+     */
+    public function buktiBayar(
+        Request $request,
+        int $id_pembayaran
+    ): JsonResponse {
+        $akun = $request->user();
+
+        $pembayaran = Pembayaran::with('iuran')
+            ->find($id_pembayaran);
+
+        if (!$pembayaran) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data pembayaran tidak ditemukan.',
+            ], 404);
+        }
+
+        // Memuat relasi role dari database.
+        $akun->load('role');
+
+        $namaRole = strtolower(
+            $akun->role?->nama_role ?? ''
+        );
+
+        // Admin dan Panitia dapat mengakses semua bukti.
+        $bolehAkses = in_array(
+            $namaRole,
+            ['admin', 'panitia'],
+            true
+        );
+
+        // Warga hanya dapat mengakses bukti miliknya sendiri.
+        if (
+            $namaRole === 'warga' &&
+            $pembayaran->iuran &&
+            (int) $pembayaran->iuran->id_warga ===
+            (int) $akun->id_warga
+        ) {
+            $bolehAkses = true;
+        }
+
+        if (!$bolehAkses) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kamu tidak memiliki akses ke bukti pembayaran ini.',
+                'debug' => [
+                    'username' => $akun->username,
+                    'id_warga_akun' => $akun->id_warga,
+                    'id_warga_iuran' => $pembayaran->iuran?->id_warga,
+                    'nama_role' => $namaRole,
+                ],
+            ], 403);
+        }
+
+        // Mendukung bukti pembayaran lama.
+        if (!$pembayaran->cloudinary_public_id) {
+            if (!$pembayaran->bukti_bayar) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bukti pembayaran tidak tersedia.',
+                ], 404);
+            }
+
+            $url = filter_var(
+                $pembayaran->bukti_bayar,
+                FILTER_VALIDATE_URL
+            )
+                ? $pembayaran->bukti_bayar
+                : asset('storage/' . $pembayaran->bukti_bayar);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Bukti pembayaran berhasil ditemukan.',
+                'data' => [
+                    'url' => $url,
+                    'expires_in' => null,
+                ],
+            ]);
+        }
+
+        if (!$pembayaran->cloudinary_format) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Format bukti pembayaran tidak tersedia.',
+            ], 404);
+        }
+
+        try {
+            $cloudinary = new Cloudinary();
+
+            $url = $cloudinary->uploadApi()->privateDownloadUrl(
+                $pembayaran->cloudinary_public_id,
+                $pembayaran->cloudinary_format,
+                [
+                    'resource_type' => 'image',
+                    'type' => 'authenticated',
+                    'expires_at' => time() + 300,
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Bukti pembayaran berhasil diakses.',
+                'data' => [
+                    'url' => $url,
+                    'expires_in' => 300,
+                ],
+            ]);
+
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil bukti pembayaran.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Mengambil transparansi iuran seluruh warga.
+     */
+    public function transparansi(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => [
+                'nullable',
+                Rule::in(['Semua', 'Lunas', 'Belum Lunas']),
+            ],
+            'search' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $status = $validated['status'] ?? 'Semua';
+        $search = $validated['search'] ?? null;
+        $perPage = $validated['per_page'] ?? 10;
+
+        $query = Iuran::with([
+            'warga:id_warga,nama',
+            'pembayaran' => function ($q) {
+                $q->orderByDesc('created_at');
+            },
+        ]);
+
+        if ($status === 'Lunas') {
+            $query->where('status', 'Sudah Bayar');
+        } elseif ($status === 'Belum Lunas') {
+            $query->where('status', 'Belum Bayar');
+        }
+
+        if ($search) {
+            $query->whereHas('warga', function ($q) use ($search) {
+                $q->where('nama', 'like', '%' . $search . '%');
+            });
+        }
+
+        $data = $query
+            ->orderByDesc('id_iuran')
+            ->paginate($perPage);
+
+        $data->getCollection()->transform(function ($iuran) {
+            $pembayaranTerakhir = $iuran->pembayaran->first();
+
+            if ($iuran->status === 'Sudah Bayar') {
+                $statusTampilan = 'Lunas';
+            } elseif (
+                $pembayaranTerakhir &&
+                $pembayaranTerakhir->status_verifikasi === 'Menunggu'
+            ) {
+                $statusTampilan = 'Menunggu Konfirmasi';
+            } else {
+                $statusTampilan = 'Belum Lunas';
+            }
+
+            return [
                 'id_iuran' => $iuran->id_iuran,
-                'tanggal_bayar' => now(),
+                'nama_kepala_keluarga' => $iuran->warga->nama ?? '-',
                 'nominal' => $iuran->nominal,
-                'metode' => $request->metode,
-                'bukti_bayar' => $path,
-                'status_verifikasi' => 'Menunggu',
-                'diverifikasi_oleh' => null,
-                'tanggal_verifikasi' => null,
-            ]);
-
-            Notifikasi::create([
-                'id_warga' => $idWarga,
-                'judul' => 'Pengajuan Pembayaran Iuran',
-                'pesan' => 'Pembayaran iuran sebesar Rp ' . number_format($iuran->nominal, 0, ',', '.') . ' berhasil diajukan dan sedang menunggu verifikasi panitia.',
-                'tipe' => 'Iuran',
-                'status_baca' => false,
-            ]);
-
-            return $p;
+                'status' => $statusTampilan,
+                'waktu_pembayaran' => $pembayaranTerakhir
+                    ? $pembayaranTerakhir->tanggal_bayar
+                    : null,
+            ];
         });
 
         return response()->json([
             'success' => true,
-            'message' => 'Pembayaran iuran berhasil diajukan dan sedang menunggu verifikasi panitia.',
-            'data' => $pembayaran,
-        ], 201);
+            'message' => 'Transparansi iuran berhasil diambil.',
+            'data' => $data,
+        ]);
     }
 }
-
