@@ -10,6 +10,11 @@ namespace App\OpenApi;
  * )
  *
  * @OA\Server(
+ *     url="https://pad-1-backend.wasmer.app",
+ *     description="Production Server - Wasmer"
+ * )
+ *
+ * @OA\Server(
  *     url="http://127.0.0.1:8000",
  *     description="Local Development Server"
  * )

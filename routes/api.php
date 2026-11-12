@@ -160,6 +160,7 @@ Route::middleware([
         'index'
     ]);
 
+
     // PB-03: Lomba
 
     Route::get('/lomba', [
@@ -171,6 +172,7 @@ Route::middleware([
         LombaController::class,
         'show'
     ])->whereNumber('id');
+
 
     // PB-04: Pendaftaran
 
@@ -194,16 +196,12 @@ Route::middleware([
         'destroy'
     ])->whereNumber('id');
 
+
     // PB-05: Iuran Pribadi
 
     Route::get('/iuran', [
         IuranController::class,
         'index'
-    ]);
-
-    Route::get('/iuran/transparansi', [
-        IuranController::class,
-        'transparansi'
     ]);
 
     Route::get('/iuran/{id_iuran}', [
@@ -215,6 +213,7 @@ Route::middleware([
         IuranController::class,
         'bayar'
     ])->whereNumber('id_iuran');
+
 
     // PB-06: Notifikasi
 
@@ -237,6 +236,7 @@ Route::middleware([
         NotifikasiController::class,
         'markAllAsRead'
     ]);
+
 
     // PB-07: Profil Warga
 
@@ -273,6 +273,19 @@ Route::middleware([
         ]);
     });
 
+
+    // PB-05: Manajemen Iuran
+
+    Route::get('/manajemen/iuran', [
+        IuranController::class,
+        'daftarIuranManajemen'
+    ]);
+
+    Route::patch('/manajemen/pembayaran/{id_pembayaran}/verifikasi', [
+        IuranController::class,
+        'verifikasiPembayaran'
+    ])->whereNumber('id_pembayaran');
+
 });
 
 
@@ -287,3 +300,21 @@ Route::middleware('auth:sanctum')->get(
     '/pembayaran/{id_pembayaran}/bukti',
     [IuranController::class, 'buktiBayar']
 )->whereNumber('id_pembayaran');
+
+
+// ==============================
+// TRANSPARANSI IURAN
+// ==============================
+// Dapat diakses Admin, Panitia, dan Warga.
+
+Route::middleware([
+    'auth:sanctum',
+    'role:Admin,Panitia,Warga',
+])->group(function () {
+
+    Route::get('/warga/iuran/transparansi', [
+        IuranController::class,
+        'transparansi'
+    ]);
+
+});

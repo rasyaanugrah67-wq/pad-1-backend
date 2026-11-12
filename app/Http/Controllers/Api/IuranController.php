@@ -302,12 +302,6 @@ class IuranController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Kamu tidak memiliki akses ke bukti pembayaran ini.',
-                'debug' => [
-                    'username' => $akun->username,
-                    'id_warga_akun' => $akun->id_warga,
-                    'id_warga_iuran' => $pembayaran->iuran?->id_warga,
-                    'nama_role' => $namaRole,
-                ],
             ], 403);
         }
 
@@ -383,7 +377,7 @@ class IuranController extends Controller
     {
         $validated = $request->validate([
             'status' => [
-                'nullable',
+                'nullable', 
                 Rule::in(['Semua', 'Lunas', 'Belum Lunas']),
             ],
             'search' => ['nullable', 'string', 'max:100'],
@@ -433,7 +427,7 @@ class IuranController extends Controller
 
             return [
                 'id_iuran' => $iuran->id_iuran,
-                'nama_kepala_keluarga' => $iuran->warga->nama ?? '-',
+                'nama_kepala_keluarga' => $iuran->warga?->nama,
                 'nominal' => $iuran->nominal,
                 'status' => $statusTampilan,
                 'waktu_pembayaran' => $pembayaranTerakhir
@@ -448,4 +442,219 @@ class IuranController extends Controller
             'data' => $data,
         ]);
     }
+
+
+    
+public function daftarIuranManajemen(Request $request): JsonResponse
+{
+    $validated = $request->validate([
+        'status' => [
+            'nullable',
+            Rule::in(['Semua', 'Menunggu', 'Lunas', 'Belum Lunas']),
+        ],
+        'search' => ['nullable', 'string', 'max:100'],
+        'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+    ]);
+
+    $status = $validated['status'] ?? 'Semua';
+    $search = $validated['search'] ?? null;
+    $perPage = $validated['per_page'] ?? 10;
+
+    $query = Iuran::with([
+        'warga',
+        'pembayaran' => function ($query) {
+            $query->orderByDesc('tanggal_bayar')
+                  ->orderByDesc('id_pembayaran');
+        },
+    ]);
+
+    // Filter berdasarkan status sebelum pagination.
+    if ($status === 'Menunggu') {
+        $query->whereHas('pembayaran', function ($query) {
+            $query->where('status_verifikasi', 'Menunggu');
+        });
+    } elseif ($status === 'Lunas') {
+        $query->where('status', 'Sudah Bayar');
+    } elseif ($status === 'Belum Lunas') {
+        $query->where('status', 'Belum Bayar')
+              ->whereDoesntHave('pembayaran', function ($query) {
+                  $query->where('status_verifikasi', 'Menunggu');
+              });
+    }
+
+    // Pencarian berdasarkan nama kepala keluarga.
+    if (!empty($search)) {
+        $query->whereHas('warga', function ($query) use ($search) {
+            $query->where(
+                'nama',
+                'like',
+                '%' . $search . '%'
+            );
+        });
+    }
+
+    // Pagination dilakukan setelah seluruh filter diterapkan.
+    $data = $query->orderByDesc('id_iuran')
+        ->paginate($perPage);
+
+    // Rapikan format data untuk frontend.
+    $data->through(function ($iuran) {
+        $pembayaran = $iuran->pembayaran->first();
+
+        if ($iuran->status === 'Sudah Bayar') {
+            $statusTampilan = 'Lunas';
+        } elseif (
+            $pembayaran &&
+            $pembayaran->status_verifikasi === 'Menunggu'
+        ) {
+            $statusTampilan = 'Menunggu Konfirmasi';
+        } else {
+            $statusTampilan = 'Belum Lunas';
+        }
+
+        return [
+            'id_iuran' => $iuran->id_iuran,
+            'id_pembayaran' => $pembayaran?->id_pembayaran,
+            'nama_kepala_keluarga' => $iuran->warga?->nama,
+            'nominal' => $iuran->nominal,
+            'tanggal_bayar' => $pembayaran?->tanggal_bayar,
+            'bukti_bayar_url' => $pembayaran?->bukti_bayar_url,
+            'status' => $statusTampilan,
+            'status_verifikasi' =>
+                $pembayaran?->status_verifikasi,
+        ];
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Data manajemen iuran berhasil diambil.',
+        'data' => $data,
+        ]);
+    }
+
+
+    /**
+     * Verifikasi pembayaran oleh Admin atau Panitia.
+     */
+    public function verifikasiPembayaran(
+        Request $request,
+        int $id_pembayaran
+    ): JsonResponse {
+        $validated = $request->validate([
+            'keputusan' => [
+                'required',
+                Rule::in(['Diterima', 'Ditolak']),
+            ],
+        ]);
+
+        $keputusan = $validated['keputusan'];
+        $akun = $request->user();
+
+        if (!$akun) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun belum terautentikasi. Silakan login kembali.',
+            ], 401);
+        }
+
+        $idAkun = $akun->id_akun;
+
+        return DB::transaction(function () use (
+            $id_pembayaran,
+            $keputusan,
+            $idAkun
+        ) {
+            // Ambil pembayaran dan kunci selama proses verifikasi.
+            $pembayaran = Pembayaran::with('iuran')
+                ->where('id_pembayaran', $id_pembayaran)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$pembayaran) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data pembayaran tidak ditemukan.',
+                ], 404);
+            }
+
+            // Pembayaran hanya boleh diverifikasi satu kali.
+            if ($pembayaran->status_verifikasi !== 'Menunggu') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran ini sudah diverifikasi sebelumnya.',
+                    'data' => [
+                        'status_verifikasi' => $pembayaran->status_verifikasi,
+                    ],
+                ], 422);
+            }
+
+            $iuran = Iuran::where(
+                'id_iuran',
+                $pembayaran->id_iuran
+            )->lockForUpdate()->first();
+
+            if (!$iuran) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data iuran tidak ditemukan.',
+                ], 404);
+            }
+
+            // Perbarui status pembayaran.
+            $pembayaran->update([
+                'status_verifikasi' => $keputusan,
+                'diverifikasi_oleh' => $idAkun,
+                'tanggal_verifikasi' => now(),
+            ]);
+
+            // Perbarui status iuran.
+            if ($keputusan === 'Diterima') {
+                $iuran->update([
+                    'status' => 'Sudah Bayar',
+                ]);
+
+                $judul = 'Pembayaran Iuran Diterima';
+                $pesan = 'Pembayaran iuran sebesar Rp ' .
+                    number_format($pembayaran->nominal, 0, ',', '.') .
+                    ' telah diterima dan dikonfirmasi oleh panitia.';
+            } else {
+                $iuran->update([
+                    'status' => 'Belum Bayar',
+                ]);
+
+                $judul = 'Pembayaran Iuran Ditolak';
+                $pesan = 'Pembayaran iuran sebesar Rp ' .
+                    number_format($pembayaran->nominal, 0, ',', '.') .
+                    ' ditolak. Silakan periksa kembali bukti pembayaran dan ajukan ulang.';
+            }
+
+            // Kirim notifikasi kepada warga.
+            Notifikasi::create([
+                'id_warga' => $iuran->id_warga,
+                'judul' => $judul,
+                'pesan' => $pesan,
+                'tipe' => 'Iuran',
+                'status_baca' => false,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $keputusan === 'Diterima'
+                    ? 'Pembayaran berhasil diterima.'
+                    : 'Pembayaran berhasil ditolak.',
+                'data' => [
+                    'id_pembayaran' => $pembayaran->id_pembayaran,
+                    'id_iuran' => $iuran->id_iuran,
+                    'status_verifikasi' => $pembayaran->status_verifikasi,
+                    'status_iuran' => $iuran->status,
+                    'diverifikasi_oleh' => $idAkun,
+                    'tanggal_verifikasi' => $pembayaran->tanggal_verifikasi,
+                ],
+            ]);
+        });
+    }
+
+
 }
+
+
