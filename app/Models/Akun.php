@@ -15,8 +15,6 @@ class Akun extends Authenticatable
 
     protected $primaryKey = 'id_akun';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'id_warga',
         'id_role',

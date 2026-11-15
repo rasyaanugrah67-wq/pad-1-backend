@@ -16,6 +16,211 @@
         }
     ],
     "paths": {
+        "/api/admin/akun": {
+            "get": {
+                "tags": [
+                    "Admin - Manajemen Akun"
+                ],
+                "summary": "Menampilkan daftar akun",
+                "description": "Menampilkan daftar akun untuk Admin.",
+                "operationId": "5ff558b55b343cfd5d5c4bf7cb77f586",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Admin",
+                                "Panitia",
+                                "Warga"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Aktif",
+                                "Nonaktif"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar akun berhasil diambil"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/akun/{id_akun}": {
+            "get": {
+                "tags": [
+                    "Admin - Manajemen Akun"
+                ],
+                "summary": "Menampilkan detail akun",
+                "description": "Menampilkan detail akun.",
+                "operationId": "aef9a662d2583daa01415d3f8c515350",
+                "parameters": [
+                    {
+                        "name": "id_akun",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail akun berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Akun tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/akun/{id_akun}/role": {
+            "patch": {
+                "tags": [
+                    "Admin - Manajemen Akun"
+                ],
+                "summary": "Mengubah role akun",
+                "description": "Mengubah role akun.",
+                "operationId": "f4fa33485b555c4f0ceb54324cd78ac1",
+                "parameters": [
+                    {
+                        "name": "id_akun",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_role"
+                                ],
+                                "properties": {
+                                    "id_role": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Role akun berhasil diperbarui"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/akun/{id_akun}/status": {
+            "patch": {
+                "tags": [
+                    "Admin - Manajemen Akun"
+                ],
+                "summary": "Mengubah status akun",
+                "description": "Mengubah status akun.",
+                "operationId": "9edb60de1a9dfb8d0bdf990cf0401936",
+                "parameters": [
+                    {
+                        "name": "id_akun",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Aktif",
+                                            "Nonaktif"
+                                        ],
+                                        "example": "Nonaktif"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status akun berhasil diperbarui"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/auth/login": {
             "post": {
                 "tags": [
@@ -2037,6 +2242,10 @@
                                         "type": "string",
                                         "example": "Budi Santoso"
                                     },
+                                    "tempat_lahir": {
+                                        "type": "string",
+                                        "example": "Yogyakarta"
+                                    },
                                     "no_hp": {
                                         "type": "string",
                                         "example": "081234567890"
@@ -2142,6 +2351,10 @@
                                         "type": "string",
                                         "example": "Budi Santoso"
                                     },
+                                    "tempat_lahir": {
+                                        "type": "string",
+                                        "example": "Yogyakarta"
+                                    },
                                     "no_hp": {
                                         "type": "string",
                                         "example": "081234567890"
@@ -2221,6 +2434,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Admin - Manajemen Akun",
+            "description": "Admin - Manajemen Akun"
+        },
         {
             "name": "Authentication",
             "description": "Authentication"

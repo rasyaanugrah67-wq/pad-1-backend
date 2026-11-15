@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\WargaController;
 use App\Http\Controllers\Api\RtController;
 use App\Http\Controllers\Api\RwController;
 use App\Http\Controllers\Api\ProfilController;
+use App\Http\Controllers\Api\AkunController;
 
 
 // ==============================
@@ -53,16 +54,44 @@ Route::middleware([
     'role:Admin',
 ])->prefix('admin')->group(function () {
 
+    // Dashboard Admin
+
     Route::get('/dashboard', [
         DashboardController::class,
         'admin'
     ]);
+
+
+    // AD-01: Data Warga dan Struktur RT/RW
 
     Route::apiResource('warga', WargaController::class);
 
     Route::apiResource('rt', RtController::class);
 
     Route::apiResource('rw', RwController::class);
+
+
+    // AD-02: Manajemen Akun dan Role
+
+    Route::get('/akun', [
+        AkunController::class,
+        'index'
+    ]);
+
+    Route::get('/akun/{id_akun}', [
+        AkunController::class,
+        'show'
+    ])->whereNumber('id_akun');
+
+    Route::patch('/akun/{id_akun}/role', [
+        AkunController::class,
+        'updateRole'
+    ])->whereNumber('id_akun');
+
+    Route::patch('/akun/{id_akun}/status', [
+        AkunController::class,
+        'updateStatus'
+    ])->whereNumber('id_akun');
 
 
     // PB-04: Pengelolaan Pendaftaran
@@ -104,10 +133,13 @@ Route::middleware([
     'role:Panitia',
 ])->prefix('panitia')->group(function () {
 
+    // Dashboard Panitia
+
     Route::get('/dashboard', [
         DashboardController::class,
         'panitia'
     ]);
+
 
     // PB-04: Pengelolaan Pendaftaran
 
@@ -148,10 +180,13 @@ Route::middleware([
     'role:Warga',
 ])->prefix('warga')->group(function () {
 
+    // Dashboard Warga
+
     Route::get('/dashboard', [
         DashboardController::class,
         'warga'
     ]);
+
 
     // PB-02: Beranda
 
@@ -266,6 +301,8 @@ Route::middleware([
     'auth:sanctum',
     'role:Admin,Panitia',
 ])->group(function () {
+
+    // PB-03: Manajemen Lomba
 
     Route::get('/lomba/manage', function () {
         return response()->json([
