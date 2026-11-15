@@ -17,6 +17,37 @@ class IuranController extends Controller
 {
     /**
      * Mengambil daftar iuran milik warga yang login.
+     *
+     * @OA\Get(
+     *     path="/api/warga/iuran",
+     *     operationId="getDaftarIuranWarga",
+     *     tags={"Warga - Iuran"},
+     *     summary="Melihat daftar iuran warga",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         required=false,
+     *         description="Filter status iuran",
+     *         @OA\Schema(
+     *             type="string",
+     *             enum={"Semua", "Belum Bayar", "Sudah Bayar"},
+     *             example="Semua"
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Daftar iuran berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Akun tidak terhubung dengan warga"),
+     *     @OA\Response(response=422, description="Parameter tidak valid")
+     * )
      */
     public function index(Request $request): JsonResponse
     {
@@ -64,8 +95,35 @@ class IuranController extends Controller
         ]);
     }
 
-    /**
+        /**
      * Mengambil detail iuran milik warga yang login.
+     *
+     * @OA\Get(
+     *     path="/api/warga/iuran/{id_iuran}",
+     *     operationId="getDetailIuranWarga",
+     *     tags={"Warga - Iuran"},
+     *     summary="Melihat detail iuran warga",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_iuran",
+     *         in="path",
+     *         required=true,
+     *         description="ID iuran",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Detail iuran berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Akun tidak terhubung dengan warga"),
+     *     @OA\Response(response=404, description="Data iuran tidak ditemukan")
+     * )
      */
     public function show(Request $request, int $id_iuran): JsonResponse
     {
@@ -106,8 +164,63 @@ class IuranController extends Controller
         ]);
     }
 
-    /**
-     * Mengajukan pembayaran dan mengunggah bukti ke Cloudinary.
+       /**
+     * Mengajukan pembayaran iuran dan mengunggah bukti pembayaran.
+     *
+     * @OA\Post(
+     *     path="/api/warga/iuran/{id_iuran}/pembayaran",
+     *     operationId="ajukanPembayaranIuranWarga",
+     *     tags={"Warga - Iuran"},
+     *     summary="Mengajukan pembayaran iuran",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_iuran",
+     *         in="path",
+     *         required=true,
+     *         description="ID iuran yang akan dibayar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"metode", "nominal", "bukti_bayar"},
+     *                 @OA\Property(
+     *                     property="metode",
+     *                     type="string",
+     *                     example="QRIS"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="nominal",
+     *                     type="number",
+     *                     format="float",
+     *                     example=50000
+     *                 ),
+     *                 @OA\Property(
+     *                     property="bukti_bayar",
+     *                     type="string",
+     *                     format="binary"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Pembayaran berhasil diajukan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Akun tidak terhubung dengan warga"),
+     *     @OA\Response(response=404, description="Data iuran tidak ditemukan"),
+     *     @OA\Response(response=409, description="Pengajuan sebelumnya masih menunggu verifikasi"),
+     *     @OA\Response(response=422, description="Data pembayaran tidak valid atau nominal tidak sesuai"),
+     *     @OA\Response(response=500, description="Gagal mengajukan pembayaran")
+     * )
      */
     public function bayar(Request $request, int $id_iuran): JsonResponse
     {
@@ -255,8 +368,42 @@ class IuranController extends Controller
         }
     }
 
-    /**
+        /**
      * Mengakses bukti pembayaran dengan pemeriksaan hak akses.
+     *
+     * @OA\Get(
+     *     path="/api/pembayaran/{id_pembayaran}/bukti",
+     *     operationId="getBuktiPembayaranIuran",
+     *     tags={"Manajemen - Iuran"},
+     *     summary="Mengakses bukti pembayaran iuran",
+     *     description="Admin dan Panitia dapat mengakses seluruh bukti pembayaran. Warga hanya dapat mengakses bukti pembayaran miliknya sendiri.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_pembayaran",
+     *         in="path",
+     *         required=true,
+     *         description="ID pembayaran",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Bukti pembayaran berhasil diakses",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="url", type="string", example="https://example.com/bukti.jpg"),
+     *                 @OA\Property(property="expires_in", type="integer", nullable=true, example=300)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Tidak memiliki hak akses"),
+     *     @OA\Response(response=404, description="Data atau bukti pembayaran tidak ditemukan"),
+     *     @OA\Response(response=500, description="Gagal mengambil bukti pembayaran")
+     * )
      */
     public function buktiBayar(
         Request $request,
@@ -370,8 +517,52 @@ class IuranController extends Controller
         }
     }
 
-    /**
+        /**
      * Mengambil transparansi iuran seluruh warga.
+     *
+     * @OA\Get(
+     *     path="/api/warga/iuran/transparansi",
+     *     operationId="getTransparansiIuran",
+     *     tags={"Warga - Iuran"},
+     *     summary="Melihat transparansi pembayaran iuran",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         required=false,
+     *         description="Filter status pembayaran",
+     *         @OA\Schema(
+     *             type="string",
+     *             enum={"Semua", "Lunas", "Belum Lunas"},
+     *             example="Semua"
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         required=false,
+     *         description="Pencarian berdasarkan nama kepala keluarga",
+     *         @OA\Schema(type="string", example="Budi")
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         required=false,
+     *         description="Jumlah data per halaman (1-50)",
+     *         @OA\Schema(type="integer", minimum=1, maximum=50, example=10)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transparansi iuran berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=422, description="Parameter tidak valid")
+     * )
      */
     public function transparansi(Request $request): JsonResponse
     {
@@ -443,7 +634,53 @@ class IuranController extends Controller
         ]);
     }
 
-
+    /**
+     * Mengambil daftar iuran untuk kebutuhan manajemen.
+     *
+     * @OA\Get(
+     *     path="/api/manajemen/iuran",
+     *     operationId="getDaftarIuranManajemen",
+     *     tags={"Manajemen - Iuran"},
+     *     summary="Melihat daftar iuran seluruh warga",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         required=false,
+     *         description="Filter status iuran",
+     *         @OA\Schema(
+     *             type="string",
+     *             enum={"Semua", "Menunggu", "Lunas", "Belum Lunas"},
+     *             example="Semua"
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         required=false,
+     *         description="Pencarian berdasarkan nama kepala keluarga",
+     *         @OA\Schema(type="string", example="Budi")
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         required=false,
+     *         description="Jumlah data per halaman (1-50)",
+     *         @OA\Schema(type="integer", minimum=1, maximum=50, example=10)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Data manajemen iuran berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=422, description="Parameter tidak valid")
+     * )
+     */
     
 public function daftarIuranManajemen(Request $request): JsonResponse
 {
@@ -533,9 +770,49 @@ public function daftarIuranManajemen(Request $request): JsonResponse
     }
 
 
-    /**
+       /**
      * Verifikasi pembayaran oleh Admin atau Panitia.
+     *
+     * @OA\Patch(
+     *     path="/api/manajemen/pembayaran/{id_pembayaran}/verifikasi",
+     *     operationId="verifikasiPembayaranIuran",
+     *     tags={"Manajemen - Iuran"},
+     *     summary="Menerima atau menolak pembayaran iuran",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_pembayaran",
+     *         in="path",
+     *         required=true,
+     *         description="ID pembayaran yang akan diverifikasi",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"keputusan"},
+     *             @OA\Property(
+     *                 property="keputusan",
+     *                 type="string",
+     *                 enum={"Diterima", "Ditolak"},
+     *                 example="Diterima"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pembayaran berhasil diverifikasi",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=404, description="Data pembayaran atau iuran tidak ditemukan"),
+     *     @OA\Response(response=422, description="Keputusan tidak valid atau pembayaran sudah diverifikasi")
+     * )
      */
+    
     public function verifikasiPembayaran(
         Request $request,
         int $id_pembayaran

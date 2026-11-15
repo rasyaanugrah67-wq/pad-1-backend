@@ -643,6 +643,559 @@
                 ]
             }
         },
+        "/api/warga/iuran": {
+            "get": {
+                "tags": [
+                    "Warga - Iuran"
+                ],
+                "summary": "Melihat daftar iuran warga",
+                "description": "Mengambil daftar iuran milik warga yang login.",
+                "operationId": "getDaftarIuranWarga",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter status iuran",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Semua",
+                                "Belum Bayar",
+                                "Sudah Bayar"
+                            ],
+                            "example": "Semua"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar iuran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akun tidak terhubung dengan warga"
+                    },
+                    "422": {
+                        "description": "Parameter tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/iuran/{id_iuran}": {
+            "get": {
+                "tags": [
+                    "Warga - Iuran"
+                ],
+                "summary": "Melihat detail iuran warga",
+                "description": "Mengambil detail iuran milik warga yang login.",
+                "operationId": "getDetailIuranWarga",
+                "parameters": [
+                    {
+                        "name": "id_iuran",
+                        "in": "path",
+                        "description": "ID iuran",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail iuran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akun tidak terhubung dengan warga"
+                    },
+                    "404": {
+                        "description": "Data iuran tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/iuran/{id_iuran}/pembayaran": {
+            "post": {
+                "tags": [
+                    "Warga - Iuran"
+                ],
+                "summary": "Mengajukan pembayaran iuran",
+                "description": "Mengajukan pembayaran iuran dan mengunggah bukti pembayaran.",
+                "operationId": "ajukanPembayaranIuranWarga",
+                "parameters": [
+                    {
+                        "name": "id_iuran",
+                        "in": "path",
+                        "description": "ID iuran yang akan dibayar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "metode",
+                                    "nominal",
+                                    "bukti_bayar"
+                                ],
+                                "properties": {
+                                    "metode": {
+                                        "type": "string",
+                                        "example": "QRIS"
+                                    },
+                                    "nominal": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50000
+                                    },
+                                    "bukti_bayar": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pembayaran berhasil diajukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akun tidak terhubung dengan warga"
+                    },
+                    "404": {
+                        "description": "Data iuran tidak ditemukan"
+                    },
+                    "409": {
+                        "description": "Pengajuan sebelumnya masih menunggu verifikasi"
+                    },
+                    "422": {
+                        "description": "Data pembayaran tidak valid atau nominal tidak sesuai"
+                    },
+                    "500": {
+                        "description": "Gagal mengajukan pembayaran"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/pembayaran/{id_pembayaran}/bukti": {
+            "get": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Mengakses bukti pembayaran iuran",
+                "description": "Admin dan Panitia dapat mengakses seluruh bukti pembayaran. Warga hanya dapat mengakses bukti pembayaran miliknya sendiri.",
+                "operationId": "getBuktiPembayaranIuran",
+                "parameters": [
+                    {
+                        "name": "id_pembayaran",
+                        "in": "path",
+                        "description": "ID pembayaran",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bukti pembayaran berhasil diakses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "url": {
+                                                    "type": "string",
+                                                    "example": "https://example.com/bukti.jpg"
+                                                },
+                                                "expires_in": {
+                                                    "type": "integer",
+                                                    "example": 300,
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    },
+                    "404": {
+                        "description": "Data atau bukti pembayaran tidak ditemukan"
+                    },
+                    "500": {
+                        "description": "Gagal mengambil bukti pembayaran"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/warga/iuran/transparansi": {
+            "get": {
+                "tags": [
+                    "Warga - Iuran"
+                ],
+                "summary": "Melihat transparansi pembayaran iuran",
+                "description": "Mengambil transparansi iuran seluruh warga.",
+                "operationId": "getTransparansiIuran",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter status pembayaran",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Semua",
+                                "Lunas",
+                                "Belum Lunas"
+                            ],
+                            "example": "Semua"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Pencarian berdasarkan nama kepala keluarga",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Budi"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Jumlah data per halaman (1-50)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 50,
+                            "minimum": 1,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transparansi iuran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "422": {
+                        "description": "Parameter tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/manajemen/iuran": {
+            "get": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Melihat daftar iuran seluruh warga",
+                "description": "Mengambil daftar iuran untuk kebutuhan manajemen.",
+                "operationId": "getDaftarIuranManajemen",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter status iuran",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Semua",
+                                "Menunggu",
+                                "Lunas",
+                                "Belum Lunas"
+                            ],
+                            "example": "Semua"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Pencarian berdasarkan nama kepala keluarga",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Budi"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Jumlah data per halaman (1-50)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 50,
+                            "minimum": 1,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Data manajemen iuran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "422": {
+                        "description": "Parameter tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/manajemen/pembayaran/{id_pembayaran}/verifikasi": {
+            "patch": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Menerima atau menolak pembayaran iuran",
+                "description": "Verifikasi pembayaran oleh Admin atau Panitia.",
+                "operationId": "verifikasiPembayaranIuran",
+                "parameters": [
+                    {
+                        "name": "id_pembayaran",
+                        "in": "path",
+                        "description": "ID pembayaran yang akan diverifikasi",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "keputusan"
+                                ],
+                                "properties": {
+                                    "keputusan": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Diterima",
+                                            "Ditolak"
+                                        ],
+                                        "example": "Diterima"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pembayaran berhasil diverifikasi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "404": {
+                        "description": "Data pembayaran atau iuran tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Keputusan tidak valid atau pembayaran sudah diverifikasi"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/warga/lomba": {
             "get": {
                 "tags": [
@@ -1360,7 +1913,7 @@
                     "Warga - Pendaftaran"
                 ],
                 "summary": "Membatalkan pendaftaran lomba",
-                "description": "PB-04: Membatalkan pendaftaran milik warga yang sedang login.",
+                "description": "Mengubah status pendaftaran menjadi Dibatalkan tanpa menghapus data dari database.",
                 "operationId": "batalkanPendaftaranWarga",
                 "parameters": [
                     {
@@ -1375,6 +1928,9 @@
                 "responses": {
                     "200": {
                         "description": "Pendaftaran berhasil dibatalkan"
+                    },
+                    "403": {
+                        "description": "Akun tidak terhubung dengan data warga"
                     },
                     "404": {
                         "description": "Pendaftaran tidak ditemukan"
@@ -2457,6 +3013,14 @@
         {
             "name": "Dashboard Warga",
             "description": "Dashboard Warga"
+        },
+        {
+            "name": "Warga - Iuran",
+            "description": "Warga - Iuran"
+        },
+        {
+            "name": "Manajemen - Iuran",
+            "description": "Manajemen - Iuran"
         },
         {
             "name": "Warga - Lomba",
