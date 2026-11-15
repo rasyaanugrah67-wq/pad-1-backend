@@ -161,8 +161,10 @@ class PendaftaranController extends Controller
                 $isBeregu = $lomba->isBeregu()
                     || strtolower(trim($lomba->jenis_pendaftaran ?? '')) === 'beregu';
 
+                // Pendaftaran yang sudah dibatalkan tidak dihitung sebagai pendaftaran aktif.
                 $sudahTerdaftar = Pendaftaran::where('id_warga', $idWarga)
                     ->where('id_lomba', $lomba->id_lomba)
+                    ->where('status', '!=', 'Dibatalkan')
                     ->exists();
 
                 if ($sudahTerdaftar) {
@@ -434,7 +436,7 @@ class PendaftaranController extends Controller
         }
     }
 
-            /**
+    /**
      * PB-04: Melihat detail pendaftaran milik warga yang sedang login.
      *
      * @OA\Get(
@@ -500,6 +502,7 @@ class PendaftaranController extends Controller
      *     operationId="batalkanPendaftaranWarga",
      *     tags={"Warga - Pendaftaran"},
      *     summary="Membatalkan pendaftaran lomba",
+     *     description="Mengubah status pendaftaran menjadi Dibatalkan tanpa menghapus data dari database.",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="id",
@@ -511,6 +514,7 @@ class PendaftaranController extends Controller
      *         response=200,
      *         description="Pendaftaran berhasil dibatalkan"
      *     ),
+     *     @OA\Response(response=403, description="Akun tidak terhubung dengan data warga"),
      *     @OA\Response(response=404, description="Pendaftaran tidak ditemukan"),
      *     @OA\Response(response=422, description="Pendaftaran tidak dapat dibatalkan"),
      *     @OA\Response(response=401, description="Belum login")
@@ -552,11 +556,15 @@ class PendaftaranController extends Controller
             ], 422);
         }
 
-        $pendaftaran->delete();
+        // Mengubah status tanpa menghapus data pendaftaran.
+        $pendaftaran->update([
+            'status' => 'Dibatalkan',
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Pendaftaran lomba berhasil dibatalkan.',
+            'data' => $pendaftaran->fresh(),
         ]);
     }
 }
