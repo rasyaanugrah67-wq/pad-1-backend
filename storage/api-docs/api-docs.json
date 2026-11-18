@@ -526,24 +526,167 @@
                 ]
             }
         },
-        "/api/admin/dashboard": {
+        "/api/dashboard": {
             "get": {
                 "tags": [
-                    "Dashboard Admin"
+                    "Dashboard"
                 ],
-                "summary": "Mengakses dashboard Admin",
-                "description": "Dashboard Admin.",
-                "operationId": "getDashboardAdmin",
+                "summary": "Mengambil ringkasan dashboard Admin dan Panitia",
+                "description": "Mengembalikan ringkasan periode aktif, pertandingan yang sedang berlangsung, dan agenda pada tanggal yang dipilih.",
+                "operationId": "getDashboardAdminPanitia",
+                "parameters": [
+                    {
+                        "name": "tanggal",
+                        "in": "query",
+                        "description": "Tanggal agenda. Default tanggal hari ini.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-08-17"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Dashboard Admin berhasil diakses",
+                        "description": "Data dashboard berhasil diambil",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Dashboard Admin"
+                                            "example": "Data dashboard berhasil diambil."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "tanggal_filter": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-08-17"
+                                                },
+                                                "ringkasan": {
+                                                    "properties": {
+                                                        "total_lomba": {
+                                                            "type": "integer",
+                                                            "example": 12
+                                                        },
+                                                        "lomba_berlangsung": {
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        },
+                                                        "total_pendaftar": {
+                                                            "type": "integer",
+                                                            "example": 25
+                                                        },
+                                                        "pembayaran_lunas": {
+                                                            "type": "integer",
+                                                            "example": 31
+                                                        },
+                                                        "pembayaran_belum_lunas": {
+                                                            "type": "integer",
+                                                            "example": 14
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "sedang_berlangsung": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id_pertandingan": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "id_lomba": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "nama_lomba": {
+                                                                "type": "string",
+                                                                "example": "Tarik Tambang"
+                                                            },
+                                                            "lokasi": {
+                                                                "type": "string",
+                                                                "example": "Lapangan Timur",
+                                                                "nullable": true
+                                                            },
+                                                            "babak": {
+                                                                "type": "string",
+                                                                "example": "Penyisihan",
+                                                                "nullable": true
+                                                            },
+                                                            "peserta_1": {
+                                                                "type": "string",
+                                                                "example": "Tim A"
+                                                            },
+                                                            "peserta_2": {
+                                                                "type": "string",
+                                                                "example": "Tim B"
+                                                            },
+                                                            "waktu_mulai": {
+                                                                "type": "string",
+                                                                "example": "08:30:00"
+                                                            },
+                                                            "waktu_selesai": {
+                                                                "type": "string",
+                                                                "example": "09:00:00",
+                                                                "nullable": true
+                                                            },
+                                                            "status": {
+                                                                "type": "string",
+                                                                "example": "Berlangsung"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "agenda": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id_jadwal": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "id_lomba": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "nama_lomba": {
+                                                                "type": "string",
+                                                                "example": "Balap Karung"
+                                                            },
+                                                            "tanggal": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-08-17"
+                                                            },
+                                                            "waktu_mulai": {
+                                                                "type": "string",
+                                                                "example": "08:00:00",
+                                                                "nullable": true
+                                                            },
+                                                            "waktu_selesai": {
+                                                                "type": "string",
+                                                                "example": "08:30:00",
+                                                                "nullable": true
+                                                            },
+                                                            "lokasi": {
+                                                                "type": "string",
+                                                                "example": "Lapangan Utama",
+                                                                "nullable": true
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -552,7 +695,36 @@
                         }
                     },
                     "401": {
-                        "description": "Belum login"
+                        "description": "Belum login atau token tidak valid"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "422": {
+                        "description": "Format tanggal tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Dashboard Admin",
+                "description": "Dashboard Admin (compatibility route).",
+                "operationId": "getDashboardAdminCompatibility",
+                "responses": {
+                    "200": {
+                        "description": "Data dashboard bersama berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login atau token tidak valid"
                     },
                     "403": {
                         "description": "Akses ditolak"
@@ -568,30 +740,17 @@
         "/api/panitia/dashboard": {
             "get": {
                 "tags": [
-                    "Dashboard Panitia"
+                    "Dashboard"
                 ],
-                "summary": "Mengakses dashboard Panitia",
-                "description": "Dashboard Panitia.",
-                "operationId": "getDashboardPanitia",
+                "summary": "Dashboard Panitia",
+                "description": "Dashboard Panitia (compatibility route).",
+                "operationId": "getDashboardPanitiaCompatibility",
                 "responses": {
                     "200": {
-                        "description": "Dashboard Panitia berhasil diakses",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Dashboard Panitia"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Data dashboard bersama berhasil diambil"
                     },
                     "401": {
-                        "description": "Belum login"
+                        "description": "Belum login atau token tidak valid"
                     },
                     "403": {
                         "description": "Akses ditolak"
@@ -610,24 +769,11 @@
                     "Dashboard Warga"
                 ],
                 "summary": "Mengakses dashboard Warga",
-                "description": "Dashboard Warga.",
+                "description": "Dashboard warga tetap terpisah dari dashboard pengelola.",
                 "operationId": "getDashboardWarga",
                 "responses": {
                     "200": {
-                        "description": "Dashboard Warga berhasil diakses",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Dashboard Warga"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Dashboard Warga berhasil diakses"
                     },
                     "401": {
                         "description": "Belum login"
@@ -3181,12 +3327,8 @@
             "description": "Beranda Warga"
         },
         {
-            "name": "Dashboard Admin",
-            "description": "Dashboard Admin"
-        },
-        {
-            "name": "Dashboard Panitia",
-            "description": "Dashboard Panitia"
+            "name": "Dashboard",
+            "description": "Dashboard"
         },
         {
             "name": "Dashboard Warga",
