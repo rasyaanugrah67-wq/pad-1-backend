@@ -46,6 +46,30 @@ Route::prefix('auth')->group(function () {
 
 
 // ==============================
+// PROFIL & PENGATURAN AKUN (SEMUA ROLE)
+// ==============================
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::put('/akun/profil', [
+        ProfilController::class,
+        'update'
+    ]);
+
+    Route::put('/akun/username', [
+        ProfilController::class,
+        'updateUsername'
+    ]);
+
+    Route::put('/akun/ubah-password', [
+        ProfilController::class,
+        'updatePassword'
+    ]);
+
+});
+
+
+// ==============================
 // ADMIN
 // ==============================
 
@@ -129,8 +153,8 @@ Route::middleware([
 // ==============================
 
 Route::middleware([
-    'auth:sanctum',
-    'role:Panitia',
+    "auth:sanctum",
+    "role:Panitia",
 ])->prefix('panitia')->group(function () {
 
     // Dashboard Panitia
@@ -176,8 +200,8 @@ Route::middleware([
 // ==============================
 
 Route::middleware([
-    'auth:sanctum',
-    'role:Warga',
+    "auth:sanctum",
+    "role:Warga",
 ])->prefix('warga')->group(function () {
 
     // Dashboard Warga
@@ -272,34 +296,15 @@ Route::middleware([
         'markAllAsRead'
     ]);
 
-
-    // PB-07: Profil Warga
-
-    Route::put('/profil', [
-        ProfilController::class,
-        'update'
-    ]);
-
-    Route::put('/username', [
-        ProfilController::class,
-        'updateUsername'
-    ]);
-
-    Route::put('/ubah-password', [
-        ProfilController::class,
-        'updatePassword'
-    ]);
-
 });
-
 
 // ==============================
 // ADMIN + PANITIA
 // ==============================
 
 Route::middleware([
-    'auth:sanctum',
-    'role:Admin,Panitia',
+    "auth:sanctum",
+    "role:Admin,Panitia",
 ])->group(function () {
 
     // PB-03: Manajemen Lomba
@@ -324,8 +329,6 @@ Route::middleware([
     ])->whereNumber('id_pembayaran');
 
 });
-
-
 // ==============================
 // AKSES BUKTI PEMBAYARAN
 // ==============================
