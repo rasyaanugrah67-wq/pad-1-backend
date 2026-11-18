@@ -3096,7 +3096,8 @@
                 "tags": [
                     "Admin - Data Warga"
                 ],
-                "summary": "Menambahkan data warga",
+                "summary": "Menambahkan warga sekaligus membuat akun login",
+                "description": "Admin menambahkan data warga. Sistem otomatis membuat akun dengan username unik dan password awal yang sama.",
                 "operationId": "915a79ecfbfcdd9d4f318f0a2e7e3182",
                 "requestBody": {
                     "required": true,
@@ -3163,10 +3164,13 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Warga berhasil ditambahkan"
+                        "description": "Data warga dan akun berhasil dibuat"
                     },
                     "422": {
                         "description": "Validasi gagal"
+                    },
+                    "500": {
+                        "description": "Gagal membuat data warga atau akun"
                     }
                 }
             }
