@@ -48,48 +48,96 @@ class PendaftaranManagementController extends Controller
      *     @OA\Response(response=403, description="Akses ditolak")
      * )
      */
-    public function index(Request $request): JsonResponse
-    {
-        $query = Pendaftaran::with([
-            'warga',
-            'lomba.kategori',
-            'lomba.jadwal',
-            'anggota',
-            'tim.pendaftaran.warga',
-        ]);
+   public function index(Request $request): JsonResponse
+{
+    $validator = Validator::make($request->all(), [
+        'status' => [
+            'nullable',
+            'in:Menunggu,Diterima,Ditolak,Dibatalkan',
+        ],
+        'id_lomba' => [
+            'nullable',
+            'integer',
+            'exists:lomba,id_lomba',
+        ],
+        'search' => [
+            'nullable',
+            'string',
+            'max:100',
+        ],
+        'page' => [
+            'nullable',
+            'integer',
+            'min:1',
+        ],
+    ]);
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('id_lomba')) {
-            $query->where('id_lomba', $request->id_lomba);
-        }
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('warga', function ($warga) use ($search) {
-                    $warga->where('nama', 'like', "%{$search}%");
-                })->orWhereHas('lomba', function ($lomba) use ($search) {
-                    $lomba->where('nama_lomba', 'like', "%{$search}%");
-                });
-            });
-        }
-
-        $pendaftaran = $query
-            ->orderByDesc('tanggal_daftar')
-            ->orderByDesc('id_pendaftaran')
-            ->paginate(20);
-
+    if ($validator->fails()) {
         return response()->json([
-            'success' => true,
-            'message' => 'Daftar pendaftaran berhasil diambil.',
-            'data' => $pendaftaran,
-        ]);
+            'success' => false,
+            'message' => 'Validasi filter pendaftaran gagal.',
+            'errors' => $validator->errors(),
+        ], 422);
     }
 
+    $query = Pendaftaran::with([
+        'warga',
+        'lomba.kategori',
+        'lomba.jadwal',
+        'anggota',
+        'tim.pendaftaran.warga',
+    ]);
+
+    // Filter berdasarkan status
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    // Filter berdasarkan lomba
+    if ($request->filled('id_lomba')) {
+        $query->where('id_lomba', $request->id_lomba);
+    }
+
+    // Search nama warga, lomba, tim, anggota, dan status
+    if ($request->filled('search')) {
+        $search = trim($request->search);
+
+        $query->where(function ($q) use ($search) {
+
+            // Nama warga yang mendaftar
+            $q->whereHas('warga', function ($warga) use ($search) {
+                $warga->where('nama', 'like', "%{$search}%");
+            })
+
+            // Nama lomba
+            ->orWhereHas('lomba', function ($lomba) use ($search) {
+                $lomba->where('nama_lomba', 'like', "%{$search}%");
+            })
+
+            // Nama tim
+            ->orWhere('nama_tim', 'like', "%{$search}%")
+
+            // Status pendaftaran
+            ->orWhere('status', 'like', "%{$search}%")
+
+            // Nama anggota tim
+            ->orWhereHas('anggota', function ($anggota) use ($search) {
+                $anggota->where('nama', 'like', "%{$search}%");
+            });
+        });
+    }
+
+    $pendaftaran = $query
+        ->orderByDesc('tanggal_daftar')
+        ->orderByDesc('id_pendaftaran')
+        ->paginate(20);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Daftar pendaftaran berhasil diambil.',
+        'data' => $pendaftaran,
+    ]);
+}
     /**
      * Melihat detail pendaftaran.
      *
@@ -176,56 +224,88 @@ class PendaftaranManagementController extends Controller
      *     @OA\Response(response=422, description="Validasi gagal")
      * )
      */
-    public function updateStatus(Request $request, $id): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'status' => ['required', 'in:Menunggu,Diterima,Ditolak'],
-            'catatan' => ['nullable', 'string', 'max:1000'],
-        ]);
+   public function updateStatus(Request $request, $id): JsonResponse
+{
+    $validator = Validator::make($request->all(), [
+        'status' => [
+            'required',
+            'in:Diterima,Ditolak',
+        ],
+        'catatan' => [
+            'nullable',
+            'string',
+            'max:1000',
+        ],
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validasi gagal.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validasi gagal.',
+            'errors' => $validator->errors(),
+        ], 422);
+    }
 
-        $pendaftaran = Pendaftaran::where(
-            'id_pendaftaran',
-            $id
-        )->first();
+    $hasil = DB::transaction(function () use ($request, $id) {
+
+        $pendaftaran = Pendaftaran::where('id_pendaftaran', $id)
+            ->lockForUpdate()
+            ->first();
 
         if (!$pendaftaran) {
-            return response()->json([
-                'success' => false,
+            return [
+                'error' => true,
+                'code' => 404,
                 'message' => 'Data pendaftaran tidak ditemukan.',
-            ], 404);
+            ];
         }
 
-        DB::transaction(function () use ($request, $pendaftaran) {
-            $pendaftaran->status = $request->status;
+        // Pendaftaran hanya dapat diproses jika statusnya Menunggu
+        if ($pendaftaran->status !== 'Menunggu') {
+            return [
+                'error' => true,
+                'code' => 422,
+                'message' => 'Pendaftaran ini sudah diproses. Status tidak dapat diubah kembali.',
+                'status_sekarang' => $pendaftaran->status,
+            ];
+        }
 
-            if ($request->has('catatan')) {
-                $pendaftaran->catatan = $request->catatan;
-            }
+        $pendaftaran->status = $request->status;
 
-            $pendaftaran->save();
-        });
+        if ($request->has('catatan')) {
+            $pendaftaran->catatan = $request->catatan;
+        }
 
-        $pendaftaran->load([
-            'warga',
-            'lomba',
-            'anggota',
-            'tim.pendaftaran.warga',
-        ]);
+        $pendaftaran->save();
 
+        return [
+            'error' => false,
+            'data' => $pendaftaran->load([
+                'warga',
+                'lomba.kategori',
+                'lomba.jadwal',
+                'anggota',
+                'tim.pendaftaran.warga',
+            ]),
+        ];
+    });
+
+    if ($hasil['error']) {
         return response()->json([
-            'success' => true,
-            'message' => 'Status pendaftaran berhasil diperbarui.',
-            'data' => $pendaftaran,
-        ]);
+            'success' => false,
+            'message' => $hasil['message'],
+            'data' => isset($hasil['status_sekarang'])
+                ? ['status_sekarang' => $hasil['status_sekarang']]
+                : null,
+        ], $hasil['code']);
     }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Status pendaftaran berhasil diperbarui menjadi ' . $request->status . '.',
+        'data' => $hasil['data'],
+    ]);
+}
 
     /**
      * Melihat pendaftar pada lomba tertentu.
@@ -255,39 +335,60 @@ class PendaftaranManagementController extends Controller
      * )
      */
     public function byLomba(Request $request, $id): JsonResponse
-    {
-        $lomba = Lomba::where('id_lomba', $id)->first();
+{
+    $lomba = Lomba::with('kategori')
+        ->where('id_lomba', $id)
+        ->first();
 
-        if (!$lomba) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data lomba tidak ditemukan.',
-            ], 404);
-        }
-
-        $query = Pendaftaran::with([
-            'warga',
-            'anggota',
-            'tim.pendaftaran.warga',
-        ])->where('id_lomba', $id);
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $pendaftaran = $query
-            ->orderByDesc('tanggal_daftar')
-            ->orderByDesc('id_pendaftaran')
-            ->paginate(20);
-
+    if (!$lomba) {
         return response()->json([
-            'success' => true,
-            'message' => 'Daftar pendaftar lomba berhasil diambil.',
-            'lomba' => $lomba,
-            'data' => $pendaftaran,
-        ]);
+            'success' => false,
+            'message' => 'Data lomba tidak ditemukan.',
+        ], 404);
     }
 
+    $validator = Validator::make($request->all(), [
+        'status' => 'nullable|in:Menunggu,Diterima,Ditolak,Dibatalkan',
+        'page' => 'nullable|integer|min:1',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Filter pendaftaran tidak valid.',
+            'errors' => $validator->errors(),
+        ], 422);
+    }
+
+    $query = Pendaftaran::with([
+        'warga',
+        'anggota',
+        'tim.pendaftaran.warga',
+        'tim.pendaftaran.anggota',
+    ])->where('id_lomba', $id);
+
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    $pendaftaran = $query
+        ->orderByDesc('tanggal_daftar')
+        ->orderByDesc('id_pendaftaran')
+        ->paginate(20);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Daftar pendaftar lomba berhasil diambil.',
+        'lomba' => [
+            'id_lomba' => $lomba->id_lomba,
+            'nama_lomba' => $lomba->nama_lomba,
+            'kategori' => $lomba->kategori,
+            'jenis_pendaftaran' => $lomba->jenis_pendaftaran,
+            'status' => $lomba->status,
+        ],
+        'data' => $pendaftaran,
+    ]);
+}
     /**
      * Melihat kuota lomba.
      *

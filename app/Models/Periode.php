@@ -18,7 +18,14 @@ class Periode extends Model
         'nama_kegiatan',
         'logo',
         'deskripsi',
+        'tanggal_mulai',
+        'tanggal_selesai',
         'status',
+    ];
+
+    protected $casts = [
+        'tanggal_mulai' => 'date',
+        'tanggal_selesai' => 'date',
     ];
 
     public function lomba(): HasMany
@@ -34,6 +41,11 @@ class Periode extends Model
     public function iuran(): HasMany
     {
         return $this->hasMany(Iuran::class, 'id_periode', 'id_periode');
+    }
+
+    public function albumDokumentasi(): HasMany
+    {
+        return $this->hasMany(AlbumDokumentasi::class, 'id_periode', 'id_periode');
     }
 }
 

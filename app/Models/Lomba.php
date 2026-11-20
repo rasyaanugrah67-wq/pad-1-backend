@@ -67,6 +67,11 @@ class Lomba extends Model
         return $this->hasMany(Dokumentasi::class, 'id_lomba', 'id_lomba');
     }
 
+    public function albumDokumentasi(): HasMany
+    {
+        return $this->hasMany(AlbumDokumentasi::class, 'id_lomba', 'id_lomba');
+    }
+
     public function pertandingan(): HasMany
 {
     return $this->hasMany(
@@ -75,5 +80,15 @@ class Lomba extends Model
         'id_lomba'
     );
 }
+
+    public function pemenang(): HasMany
+    {
+        return $this->hasMany(Pemenang::class, 'id_lomba', 'id_lomba')->orderBy('peringkat');
+    }
+
+    public function timLomba(): HasMany
+    {
+        return $this->hasMany(TimLomba::class, 'id_lomba', 'id_lomba');
+    }
 }
 

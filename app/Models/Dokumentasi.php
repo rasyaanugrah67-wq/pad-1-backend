@@ -14,12 +14,18 @@ class Dokumentasi extends Model
     protected $primaryKey = 'id_dokumentasi';
 
     protected $fillable = [
+        'id_album',
         'id_lomba',
         'id_panitia',
         'jenis_file',
         'file',
         'keterangan',
     ];
+
+    public function album(): BelongsTo
+    {
+        return $this->belongsTo(AlbumDokumentasi::class, 'id_album', 'id_album');
+    }
 
     public function lomba(): BelongsTo
     {

@@ -15,7 +15,11 @@ use App\Http\Controllers\Api\RtController;
 use App\Http\Controllers\Api\RwController;
 use App\Http\Controllers\Api\ProfilController;
 use App\Http\Controllers\Api\AkunController;
-
+use App\Http\Controllers\Api\LombaManagementController;
+use App\Http\Controllers\Api\JadwalManagementController;
+use App\Http\Controllers\Api\PertandinganManagementController;
+use App\Http\Controllers\Api\DokumentasiController;
+use App\Http\Controllers\Api\HistoriController;
 
 // ==============================
 // AUTHENTICATION
@@ -309,12 +313,48 @@ Route::middleware([
 
     // PB-03: Manajemen Lomba
 
-    Route::get('/lomba/manage', function () {
-        return response()->json([
-            'message' => 'Halaman ini dapat diakses Admin dan Panitia'
-        ]);
-    });
+   Route::get('/lomba/manage', [
+    LombaManagementController::class,
+    'index'
+]);
 
+Route::post('/lomba/manage', [
+    LombaManagementController::class,
+    'store'
+]);
+
+
+Route::put('/lomba/manage/{id_lomba}', [
+    LombaManagementController::class,
+    'update'
+]);
+
+
+Route::delete('/lomba/manage/{id_lomba}', [
+    LombaManagementController::class,
+    'destroy'
+]);
+
+// PB-03: Kelola Pertandingan
+Route::get('/pertandingan/manage', [
+    PertandinganManagementController::class,
+    'index'
+]);
+
+Route::post('/pertandingan/manage', [
+    PertandinganManagementController::class,
+    'store'
+]);
+
+Route::put('/pertandingan/manage/{id_pertandingan}', [
+    PertandinganManagementController::class,
+    'update'
+]);
+
+Route::delete('/pertandingan/manage/{id_pertandingan}', [
+    PertandinganManagementController::class,
+    'destroy'
+]);
 
     // PB-05: Manajemen Iuran
 
@@ -327,6 +367,28 @@ Route::middleware([
         IuranController::class,
         'verifikasiPembayaran'
     ])->whereNumber('id_pembayaran');
+
+
+Route::get('/jadwal/manage', [
+    JadwalManagementController::class,
+    'index'
+]);
+
+Route::post('/jadwal/manage', [
+    JadwalManagementController::class,
+    'store'
+]);
+
+Route::put('/jadwal/manage/{id_jadwal}', [
+    JadwalManagementController::class,
+    'update'
+]);
+
+Route::delete('/jadwal/manage/{id_jadwal}', [
+    JadwalManagementController::class,
+    'destroy'
+]);
+
 
 });
 // ==============================
@@ -357,4 +419,31 @@ Route::middleware([
         'transparansi'
     ]);
 
+});
+
+// PT-04: Dokumentasi. Semua role dapat membaca; Admin dan Panitia dapat mengelola.
+Route::middleware(['auth:sanctum', 'role:Admin,Panitia,Warga'])->group(function () {
+    Route::get('/dokumentasi', [DokumentasiController::class, 'index']);
+    Route::get('/dokumentasi/{id_album}', [DokumentasiController::class, 'show'])->whereNumber('id_album');
+});
+
+Route::middleware(['auth:sanctum', 'role:Admin,Panitia'])->group(function () {
+    Route::post('/dokumentasi', [DokumentasiController::class, 'store']);
+    Route::put('/dokumentasi/{id_album}', [DokumentasiController::class, 'update'])->whereNumber('id_album');
+    Route::delete('/dokumentasi/{id_album}', [DokumentasiController::class, 'destroy'])->whereNumber('id_album');
+    Route::post('/dokumentasi/{id_album}/media', [DokumentasiController::class, 'uploadMedia'])->whereNumber('id_album');
+    Route::delete('/dokumentasi/{id_album}/media/{id_dokumentasi}', [DokumentasiController::class, 'destroyMedia'])->whereNumber(['id_album', 'id_dokumentasi']);
+});
+
+// PT-04: Histori. Semua role dapat membaca; Admin dan Panitia dapat mengelola.
+Route::middleware(['auth:sanctum', 'role:Admin,Panitia,Warga'])->group(function () {
+    Route::get('/histori', [HistoriController::class, 'index']);
+    Route::get('/histori/{id_periode}', [HistoriController::class, 'show'])->whereNumber('id_periode');
+});
+
+Route::middleware(['auth:sanctum', 'role:Admin,Panitia'])->group(function () {
+    Route::put('/histori/{id_periode}', [HistoriController::class, 'update'])->whereNumber('id_periode');
+    Route::post('/histori/{id_periode}/lomba/{id_lomba}/pemenang', [HistoriController::class, 'storeWinner'])->whereNumber(['id_periode', 'id_lomba']);
+    Route::put('/pemenang/{id_pemenang}', [HistoriController::class, 'updateWinner'])->whereNumber('id_pemenang');
+    Route::delete('/pemenang/{id_pemenang}', [HistoriController::class, 'destroyWinner'])->whereNumber('id_pemenang');
 });
