@@ -789,6 +789,1079 @@
                 ]
             }
         },
+        "/api/dokumentasi": {
+            "get": {
+                "tags": [
+                    "Dokumentasi"
+                ],
+                "summary": "Mengambil daftar album dokumentasi",
+                "description": "Dapat diakses oleh Admin, Panitia, dan Warga.",
+                "operationId": "getDaftarAlbumDokumentasi",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Pencarian berdasarkan nama album",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "HUT RI"
+                        }
+                    },
+                    {
+                        "name": "id_periode",
+                        "in": "query",
+                        "description": "Filter berdasarkan ID Periode",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "id_lomba",
+                        "in": "query",
+                        "description": "Filter berdasarkan ID Lomba",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar album dokumentasi berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar album dokumentasi berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Dokumentasi"
+                ],
+                "summary": "Membuat album dokumentasi baru",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia. Menggunakan multipart/form-data jika menyertakan cover.",
+                "operationId": "storeAlbumDokumentasi",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "nama_album"
+                                ],
+                                "properties": {
+                                    "nama_album": {
+                                        "type": "string",
+                                        "example": "Album Pembukaan HUT RI"
+                                    },
+                                    "tanggal_album": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-17"
+                                    },
+                                    "id_periode": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "id_lomba": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "cover": {
+                                        "description": "File cover gambar (jpg, png, webp)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Album dokumentasi berhasil dibuat",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Album dokumentasi berhasil dibuat."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (hanya Admin/Panitia)"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dokumentasi/{id_album}": {
+            "get": {
+                "tags": [
+                    "Dokumentasi"
+                ],
+                "summary": "Mengambil detail album dokumentasi",
+                "description": "Dapat diakses oleh Admin, Panitia, dan Warga.",
+                "operationId": "getDetailAlbumDokumentasi",
+                "parameters": [
+                    {
+                        "name": "id_album",
+                        "in": "path",
+                        "description": "ID Album Dokumentasi",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail album dokumentasi berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail album dokumentasi berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Album dokumentasi tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Dokumentasi"
+                ],
+                "summary": "Memperbarui data album dokumentasi",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia. Untuk update file cover, gunakan POST dengan _method=PUT (multipart/form-data) atau gunakan PUT raw JSON tanpa file cover.",
+                "operationId": "updateAlbumDokumentasi",
+                "parameters": [
+                    {
+                        "name": "id_album",
+                        "in": "path",
+                        "description": "ID Album Dokumentasi",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama_album": {
+                                        "type": "string",
+                                        "example": "Album Pembukaan HUT RI Revisi"
+                                    },
+                                    "tanggal_album": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-17"
+                                    },
+                                    "id_periode": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "id_lomba": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Album dokumentasi berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Album dokumentasi berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "404": {
+                        "description": "Album dokumentasi tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Dokumentasi"
+                ],
+                "summary": "Menghapus album dokumentasi beserta seluruh medianya",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia.",
+                "operationId": "destroyAlbumDokumentasi",
+                "parameters": [
+                    {
+                        "name": "id_album",
+                        "in": "path",
+                        "description": "ID Album Dokumentasi",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Album dokumentasi berhasil dihapus",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Album dan seluruh media dokumentasi berhasil dihapus."
+                                        },
+                                        "data": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "404": {
+                        "description": "Album dokumentasi tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dokumentasi/{id_album}/media": {
+            "post": {
+                "tags": [
+                    "Dokumentasi"
+                ],
+                "summary": "Mengunggah foto atau video ke dalam album",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia. Menggunakan multipart/form-data.",
+                "operationId": "uploadMediaDokumentasi",
+                "parameters": [
+                    {
+                        "name": "id_album",
+                        "in": "path",
+                        "description": "ID Album Dokumentasi",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "jenis_file",
+                                    "file"
+                                ],
+                                "properties": {
+                                    "jenis_file": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Foto",
+                                            "Video"
+                                        ],
+                                        "example": "Foto"
+                                    },
+                                    "file": {
+                                        "description": "File foto (jpg, png, webp) atau video (mp4, mov, avi, mkv) max 50MB",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "keterangan": {
+                                        "type": "string",
+                                        "example": "Dokumentasi saat babak semifinal"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Media dokumentasi berhasil diunggah",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Media dokumentasi berhasil diunggah."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "404": {
+                        "description": "Album dokumentasi tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/dokumentasi/{id_album}/media/{id_dokumentasi}": {
+            "delete": {
+                "tags": [
+                    "Dokumentasi"
+                ],
+                "summary": "Menghapus foto atau video tertentu dari album",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia.",
+                "operationId": "destroyMediaDokumentasi",
+                "parameters": [
+                    {
+                        "name": "id_album",
+                        "in": "path",
+                        "description": "ID Album Dokumentasi",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "id_dokumentasi",
+                        "in": "path",
+                        "description": "ID Media Dokumentasi",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Media dokumentasi berhasil dihapus",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Media dokumentasi berhasil dihapus."
+                                        },
+                                        "data": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "404": {
+                        "description": "Media dokumentasi tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/histori": {
+            "get": {
+                "tags": [
+                    "Histori"
+                ],
+                "summary": "Mengambil daftar histori per periode HUT RI",
+                "description": "Dapat diakses oleh Admin, Panitia, dan Warga.",
+                "operationId": "getDaftarHistoriPeriode",
+                "parameters": [
+                    {
+                        "name": "tahun",
+                        "in": "query",
+                        "description": "Filter berdasarkan tahun",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Pencarian nama kegiatan, deskripsi, atau tahun",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "HUT RI"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar histori berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar histori berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/histori/{id_periode}": {
+            "get": {
+                "tags": [
+                    "Histori"
+                ],
+                "summary": "Mengambil detail histori periode beserta daftar lomba dan pemenang",
+                "description": "Dapat diakses oleh Admin, Panitia, dan Warga.",
+                "operationId": "getDetailHistoriPeriode",
+                "parameters": [
+                    {
+                        "name": "id_periode",
+                        "in": "path",
+                        "description": "ID Periode",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Pencarian nama lomba, kategori, lokasi, atau pemenang",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Catur"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail histori berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail histori berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Histori periode tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Histori"
+                ],
+                "summary": "Memperbarui data histori kegiatan periode",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia.",
+                "operationId": "updateHistoriPeriode",
+                "parameters": [
+                    {
+                        "name": "id_periode",
+                        "in": "path",
+                        "description": "ID Periode",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "tahun": {
+                                        "type": "integer",
+                                        "example": 2026
+                                    },
+                                    "nama_kegiatan": {
+                                        "type": "string",
+                                        "example": "Semarak HUT RI ke-81"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string",
+                                        "example": "Peringatan kemerdekaan tingkat RW 05"
+                                    },
+                                    "tanggal_mulai": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-01"
+                                    },
+                                    "tanggal_selesai": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-17"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Aktif",
+                                            "Selesai"
+                                        ],
+                                        "example": "Selesai"
+                                    },
+                                    "logo": {
+                                        "type": "string",
+                                        "example": "https://example.com/logo.png"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Informasi histori berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Informasi histori berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "404": {
+                        "description": "Histori periode tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/histori/{id_periode}/lomba/{id_lomba}/pemenang": {
+            "post": {
+                "tags": [
+                    "Histori - Pemenang"
+                ],
+                "summary": "Menambahkan pemenang pada suatu lomba",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia. Pemenang individu memerlukan id_pendaftaran (status Diterima); pemenang beregu memerlukan id_tim.",
+                "operationId": "storePemenangLomba",
+                "parameters": [
+                    {
+                        "name": "id_periode",
+                        "in": "path",
+                        "description": "ID Periode",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "id_lomba",
+                        "in": "path",
+                        "description": "ID Lomba",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "tipe_pemenang",
+                                    "peringkat"
+                                ],
+                                "properties": {
+                                    "tipe_pemenang": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Individu",
+                                            "Beregu"
+                                        ],
+                                        "example": "Individu"
+                                    },
+                                    "peringkat": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "id_pendaftaran": {
+                                        "description": "Wajib untuk pemenang Individu",
+                                        "type": "integer",
+                                        "example": 8,
+                                        "nullable": true
+                                    },
+                                    "id_tim": {
+                                        "description": "Wajib untuk pemenang Beregu",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
+                                    },
+                                    "nama_pemenang": {
+                                        "type": "string",
+                                        "example": "Hadi Setiawan",
+                                        "nullable": true
+                                    },
+                                    "keterangan": {
+                                        "type": "string",
+                                        "example": "Juara 1 Turnamen Catur",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Pemenang berhasil ditambahkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pemenang berhasil ditambahkan."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan pada periode tersebut"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/pemenang/{id_pemenang}": {
+            "put": {
+                "tags": [
+                    "Histori - Pemenang"
+                ],
+                "summary": "Memperbarui data pemenang lomba",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia. Mendukung pembaruan parsial (misal hanya peringkat atau keterangan).",
+                "operationId": "updatePemenangLomba",
+                "parameters": [
+                    {
+                        "name": "id_pemenang",
+                        "in": "path",
+                        "description": "ID Pemenang",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "tipe_pemenang": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Individu",
+                                            "Beregu"
+                                        ],
+                                        "example": "Individu"
+                                    },
+                                    "peringkat": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "id_pendaftaran": {
+                                        "type": "integer",
+                                        "example": 8,
+                                        "nullable": true
+                                    },
+                                    "id_tim": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
+                                    },
+                                    "nama_pemenang": {
+                                        "type": "string",
+                                        "example": "Hadi Setiawan",
+                                        "nullable": true
+                                    },
+                                    "keterangan": {
+                                        "type": "string",
+                                        "example": "Juara 1 Turnamen Catur (Revisi)",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pemenang berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pemenang berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "404": {
+                        "description": "Pemenang tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Histori - Pemenang"
+                ],
+                "summary": "Menghapus data pemenang lomba",
+                "description": "Hanya dapat diakses oleh Admin dan Panitia.",
+                "operationId": "destroyPemenangLomba",
+                "parameters": [
+                    {
+                        "name": "id_pemenang",
+                        "in": "path",
+                        "description": "ID Pemenang",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pemenang berhasil dihapus",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pemenang berhasil dihapus."
+                                        },
+                                        "data": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    },
+                    "404": {
+                        "description": "Pemenang tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/warga/iuran": {
             "get": {
                 "tags": [
@@ -3337,6 +4410,18 @@
         {
             "name": "Dashboard Warga",
             "description": "Dashboard Warga"
+        },
+        {
+            "name": "Dokumentasi",
+            "description": "Dokumentasi"
+        },
+        {
+            "name": "Histori",
+            "description": "Histori"
+        },
+        {
+            "name": "Histori - Pemenang",
+            "description": "Histori - Pemenang"
         },
         {
             "name": "Warga - Iuran",
