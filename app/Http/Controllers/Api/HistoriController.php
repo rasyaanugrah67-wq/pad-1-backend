@@ -10,9 +10,44 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use OpenApi\Annotations as OA;
 
 class HistoriController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/histori",
+     *     operationId="getDaftarHistoriPeriode",
+     *     tags={"Histori"},
+     *     summary="Mengambil daftar histori per periode HUT RI",
+     *     description="Dapat diakses oleh Admin, Panitia, dan Warga.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="tahun",
+     *         in="query",
+     *         required=false,
+     *         description="Filter berdasarkan tahun",
+     *         @OA\Schema(type="integer", example=2026)
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         required=false,
+     *         description="Pencarian nama kegiatan, deskripsi, atau tahun",
+     *         @OA\Schema(type="string", example="HUT RI")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Daftar histori berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Daftar histori berhasil diambil."),
+     *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated")
+     * )
+     */
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -42,6 +77,41 @@ class HistoriController extends Controller
         return $this->ok($data, 'Daftar histori berhasil diambil.');
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/histori/{id_periode}",
+     *     operationId="getDetailHistoriPeriode",
+     *     tags={"Histori"},
+     *     summary="Mengambil detail histori periode beserta daftar lomba dan pemenang",
+     *     description="Dapat diakses oleh Admin, Panitia, dan Warga.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_periode",
+     *         in="path",
+     *         required=true,
+     *         description="ID Periode",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         required=false,
+     *         description="Pencarian nama lomba, kategori, lokasi, atau pemenang",
+     *         @OA\Schema(type="string", example="Catur")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Detail histori berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Detail histori berhasil diambil."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=404, description="Histori periode tidak ditemukan")
+     * )
+     */
     public function show(int $id_periode, Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -69,6 +139,48 @@ class HistoriController extends Controller
         );
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/histori/{id_periode}",
+     *     operationId="updateHistoriPeriode",
+     *     tags={"Histori"},
+     *     summary="Memperbarui data histori kegiatan periode",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_periode",
+     *         in="path",
+     *         required=true,
+     *         description="ID Periode",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="tahun", type="integer", example=2026),
+     *             @OA\Property(property="nama_kegiatan", type="string", example="Semarak HUT RI ke-81"),
+     *             @OA\Property(property="deskripsi", type="string", example="Peringatan kemerdekaan tingkat RW 05"),
+     *             @OA\Property(property="tanggal_mulai", type="string", format="date", example="2026-08-01"),
+     *             @OA\Property(property="tanggal_selesai", type="string", format="date", example="2026-08-17"),
+     *             @OA\Property(property="status", type="string", enum={"Aktif","Selesai"}, example="Selesai"),
+     *             @OA\Property(property="logo", type="string", example="https://example.com/logo.png")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Informasi histori berhasil diperbarui",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Informasi histori berhasil diperbarui."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=404, description="Histori periode tidak ditemukan"),
+     *     @OA\Response(response=422, description="Validasi gagal")
+     * )
+     */
     public function update(Request $request, int $id_periode): JsonResponse
     {
         $periode = Periode::find($id_periode);
@@ -130,6 +242,55 @@ class HistoriController extends Controller
         );
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/histori/{id_periode}/lomba/{id_lomba}/pemenang",
+     *     operationId="storePemenangLomba",
+     *     tags={"Histori - Pemenang"},
+     *     summary="Menambahkan pemenang pada suatu lomba",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia. Pemenang individu memerlukan id_pendaftaran (status Diterima); pemenang beregu memerlukan id_tim.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_periode",
+     *         in="path",
+     *         required=true,
+     *         description="ID Periode",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="id_lomba",
+     *         in="path",
+     *         required=true,
+     *         description="ID Lomba",
+     *         @OA\Schema(type="integer", example=2)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"tipe_pemenang","peringkat"},
+     *             @OA\Property(property="tipe_pemenang", type="string", enum={"Individu","Beregu"}, example="Individu"),
+     *             @OA\Property(property="peringkat", type="integer", example=1),
+     *             @OA\Property(property="id_pendaftaran", type="integer", nullable=true, example=8, description="Wajib untuk pemenang Individu"),
+     *             @OA\Property(property="id_tim", type="integer", nullable=true, example=null, description="Wajib untuk pemenang Beregu"),
+     *             @OA\Property(property="nama_pemenang", type="string", nullable=true, example="Hadi Setiawan"),
+     *             @OA\Property(property="keterangan", type="string", nullable=true, example="Juara 1 Turnamen Catur")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Pemenang berhasil ditambahkan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Pemenang berhasil ditambahkan."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=404, description="Lomba tidak ditemukan pada periode tersebut"),
+     *     @OA\Response(response=422, description="Validasi gagal")
+     * )
+     */
     public function storeWinner(
         Request $request,
         int $id_periode,
@@ -153,6 +314,47 @@ class HistoriController extends Controller
         );
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/pemenang/{id_pemenang}",
+     *     operationId="updatePemenangLomba",
+     *     tags={"Histori - Pemenang"},
+     *     summary="Memperbarui data pemenang lomba",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia. Mendukung pembaruan parsial (misal hanya peringkat atau keterangan).",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_pemenang",
+     *         in="path",
+     *         required=true,
+     *         description="ID Pemenang",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="tipe_pemenang", type="string", enum={"Individu","Beregu"}, example="Individu"),
+     *             @OA\Property(property="peringkat", type="integer", example=1),
+     *             @OA\Property(property="id_pendaftaran", type="integer", nullable=true, example=8),
+     *             @OA\Property(property="id_tim", type="integer", nullable=true, example=null),
+     *             @OA\Property(property="nama_pemenang", type="string", nullable=true, example="Hadi Setiawan"),
+     *             @OA\Property(property="keterangan", type="string", nullable=true, example="Juara 1 Turnamen Catur (Revisi)")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pemenang berhasil diperbarui",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Pemenang berhasil diperbarui."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=404, description="Pemenang tidak ditemukan"),
+     *     @OA\Response(response=422, description="Validasi gagal")
+     * )
+     */
     public function updateWinner(Request $request, int $id_pemenang): JsonResponse
     {
         $winner = Pemenang::with('lomba')->find($id_pemenang);
@@ -179,6 +381,35 @@ class HistoriController extends Controller
         );
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/pemenang/{id_pemenang}",
+     *     operationId="destroyPemenangLomba",
+     *     tags={"Histori - Pemenang"},
+     *     summary="Menghapus data pemenang lomba",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_pemenang",
+     *         in="path",
+     *         required=true,
+     *         description="ID Pemenang",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pemenang berhasil dihapus",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Pemenang berhasil dihapus."),
+     *             @OA\Property(property="data", type="null")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=404, description="Pemenang tidak ditemukan")
+     * )
+     */
     public function destroyWinner(int $id_pemenang): JsonResponse
     {
         $winner = Pemenang::find($id_pemenang);

@@ -9,9 +9,51 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use OpenApi\Annotations as OA;
 
 class DokumentasiController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/dokumentasi",
+     *     operationId="getDaftarAlbumDokumentasi",
+     *     tags={"Dokumentasi"},
+     *     summary="Mengambil daftar album dokumentasi",
+     *     description="Dapat diakses oleh Admin, Panitia, dan Warga.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         required=false,
+     *         description="Pencarian berdasarkan nama album",
+     *         @OA\Schema(type="string", example="HUT RI")
+     *     ),
+     *     @OA\Parameter(
+     *         name="id_periode",
+     *         in="query",
+     *         required=false,
+     *         description="Filter berdasarkan ID Periode",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="id_lomba",
+     *         in="query",
+     *         required=false,
+     *         description="Filter berdasarkan ID Lomba",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Daftar album dokumentasi berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Daftar album dokumentasi berhasil diambil."),
+     *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated")
+     * )
+     */
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -47,6 +89,34 @@ class DokumentasiController extends Controller
         );
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/dokumentasi/{id_album}",
+     *     operationId="getDetailAlbumDokumentasi",
+     *     tags={"Dokumentasi"},
+     *     summary="Mengambil detail album dokumentasi",
+     *     description="Dapat diakses oleh Admin, Panitia, dan Warga.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_album",
+     *         in="path",
+     *         required=true,
+     *         description="ID Album Dokumentasi",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Detail album dokumentasi berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Detail album dokumentasi berhasil diambil."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=404, description="Album dokumentasi tidak ditemukan")
+     * )
+     */
     public function show(int $id_album): JsonResponse
     {
         $album = AlbumDokumentasi::with([
@@ -65,6 +135,42 @@ class DokumentasiController extends Controller
         );
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/dokumentasi",
+     *     operationId="storeAlbumDokumentasi",
+     *     tags={"Dokumentasi"},
+     *     summary="Membuat album dokumentasi baru",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia. Menggunakan multipart/form-data jika menyertakan cover.",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"nama_album"},
+     *                 @OA\Property(property="nama_album", type="string", example="Album Pembukaan HUT RI"),
+     *                 @OA\Property(property="tanggal_album", type="string", format="date", example="2026-08-17"),
+     *                 @OA\Property(property="id_periode", type="integer", example=1),
+     *                 @OA\Property(property="id_lomba", type="integer", example=1),
+     *                 @OA\Property(property="cover", type="string", format="binary", description="File cover gambar (jpg, png, webp)")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Album dokumentasi berhasil dibuat",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Album dokumentasi berhasil dibuat."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (hanya Admin/Panitia)"),
+     *     @OA\Response(response=422, description="Validasi gagal")
+     * )
+     */
     public function store(Request $request): JsonResponse
     {
         $validated = $this->albumValidation($request);
@@ -104,6 +210,45 @@ class DokumentasiController extends Controller
         );
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/dokumentasi/{id_album}",
+     *     operationId="updateAlbumDokumentasi",
+     *     tags={"Dokumentasi"},
+     *     summary="Memperbarui data album dokumentasi",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia. Untuk update file cover, gunakan POST dengan _method=PUT (multipart/form-data) atau gunakan PUT raw JSON tanpa file cover.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_album",
+     *         in="path",
+     *         required=true,
+     *         description="ID Album Dokumentasi",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="nama_album", type="string", example="Album Pembukaan HUT RI Revisi"),
+     *             @OA\Property(property="tanggal_album", type="string", format="date", example="2026-08-17"),
+     *             @OA\Property(property="id_periode", type="integer", example=1),
+     *             @OA\Property(property="id_lomba", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Album dokumentasi berhasil diperbarui",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Album dokumentasi berhasil diperbarui."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=404, description="Album dokumentasi tidak ditemukan"),
+     *     @OA\Response(response=422, description="Validasi gagal")
+     * )
+     */
     public function update(Request $request, int $id_album): JsonResponse
     {
         $album = AlbumDokumentasi::find($id_album);
@@ -161,6 +306,35 @@ class DokumentasiController extends Controller
         );
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/dokumentasi/{id_album}",
+     *     operationId="destroyAlbumDokumentasi",
+     *     tags={"Dokumentasi"},
+     *     summary="Menghapus album dokumentasi beserta seluruh medianya",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_album",
+     *         in="path",
+     *         required=true,
+     *         description="ID Album Dokumentasi",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Album dokumentasi berhasil dihapus",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Album dan seluruh media dokumentasi berhasil dihapus."),
+     *             @OA\Property(property="data", type="null")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=404, description="Album dokumentasi tidak ditemukan")
+     * )
+     */
     public function destroy(int $id_album): JsonResponse
     {
         $album = AlbumDokumentasi::with('media')->find($id_album);
@@ -191,6 +365,48 @@ class DokumentasiController extends Controller
         return $this->ok(null, 'Album dan seluruh media dokumentasi berhasil dihapus.');
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/dokumentasi/{id_album}/media",
+     *     operationId="uploadMediaDokumentasi",
+     *     tags={"Dokumentasi"},
+     *     summary="Mengunggah foto atau video ke dalam album",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia. Menggunakan multipart/form-data.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_album",
+     *         in="path",
+     *         required=true,
+     *         description="ID Album Dokumentasi",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"jenis_file","file"},
+     *                 @OA\Property(property="jenis_file", type="string", enum={"Foto","Video"}, example="Foto"),
+     *                 @OA\Property(property="file", type="string", format="binary", description="File foto (jpg, png, webp) atau video (mp4, mov, avi, mkv) max 50MB"),
+     *                 @OA\Property(property="keterangan", type="string", example="Dokumentasi saat babak semifinal")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Media dokumentasi berhasil diunggah",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Media dokumentasi berhasil diunggah."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=404, description="Album dokumentasi tidak ditemukan"),
+     *     @OA\Response(response=422, description="Validasi gagal")
+     * )
+     */
     public function uploadMedia(Request $request, int $id_album): JsonResponse
     {
         $album = AlbumDokumentasi::find($id_album);
@@ -237,6 +453,42 @@ class DokumentasiController extends Controller
         );
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/dokumentasi/{id_album}/media/{id_dokumentasi}",
+     *     operationId="destroyMediaDokumentasi",
+     *     tags={"Dokumentasi"},
+     *     summary="Menghapus foto atau video tertentu dari album",
+     *     description="Hanya dapat diakses oleh Admin dan Panitia.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_album",
+     *         in="path",
+     *         required=true,
+     *         description="ID Album Dokumentasi",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="id_dokumentasi",
+     *         in="path",
+     *         required=true,
+     *         description="ID Media Dokumentasi",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Media dokumentasi berhasil dihapus",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Media dokumentasi berhasil dihapus."),
+     *             @OA\Property(property="data", type="null")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak"),
+     *     @OA\Response(response=404, description="Media dokumentasi tidak ditemukan")
+     * )
+     */
     public function destroyMedia(int $id_album, int $id_dokumentasi): JsonResponse
     {
         $media = AlbumDokumentasi::find($id_album)
