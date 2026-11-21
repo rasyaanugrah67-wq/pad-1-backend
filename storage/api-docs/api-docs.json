@@ -3631,6 +3631,184 @@
                 ]
             }
         },
+        "/api/pengaturan-pembayaran": {
+            "get": {
+                "tags": [
+                    "Pengaturan Pembayaran"
+                ],
+                "summary": "Melihat pengaturan pembayaran",
+                "description": "Mengambil informasi rekening bank dan QRIS untuk pembayaran iuran.",
+                "operationId": "getPengaturanPembayaran",
+                "responses": {
+                    "200": {
+                        "description": "Pengaturan pembayaran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pengaturan pembayaran berhasil diambil."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id_pengaturan": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nama_bank": {
+                                                    "type": "string",
+                                                    "example": "BCA",
+                                                    "nullable": true
+                                                },
+                                                "nomor_rekening": {
+                                                    "type": "string",
+                                                    "example": "1234567890",
+                                                    "nullable": true
+                                                },
+                                                "atas_nama": {
+                                                    "type": "string",
+                                                    "example": "Panitia 17 Agustus",
+                                                    "nullable": true
+                                                },
+                                                "qris_image": {
+                                                    "type": "string",
+                                                    "example": "https://example.com/storage/pembayaran/qris/qris.png",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Pengaturan Pembayaran"
+                ],
+                "summary": "Mengubah pengaturan pembayaran",
+                "description": "Admin atau Panitia dapat mengubah informasi rekening bank dan mengunggah gambar QRIS.",
+                "operationId": "updatePengaturanPembayaran",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "nama_bank": {
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "example": "BCA"
+                                    },
+                                    "nomor_rekening": {
+                                        "type": "string",
+                                        "maxLength": 50,
+                                        "example": "1234567890"
+                                    },
+                                    "atas_nama": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Panitia 17 Agustus"
+                                    },
+                                    "qris_image": {
+                                        "description": "File gambar QRIS (JPEG, JPG, PNG, WebP), maksimal 5 MB",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pengaturan pembayaran berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Pengaturan pembayaran berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id_pengaturan": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nama_bank": {
+                                                    "type": "string",
+                                                    "example": "BCA",
+                                                    "nullable": true
+                                                },
+                                                "nomor_rekening": {
+                                                    "type": "string",
+                                                    "example": "1234567890",
+                                                    "nullable": true
+                                                },
+                                                "atas_nama": {
+                                                    "type": "string",
+                                                    "example": "Panitia 17 Agustus",
+                                                    "nullable": true
+                                                },
+                                                "qris_image": {
+                                                    "type": "string",
+                                                    "example": "https://example.com/storage/pembayaran/qris/qris.png",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    },
+                    "422": {
+                        "description": "Data tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/akun/profil": {
             "put": {
                 "tags": [
@@ -4450,6 +4628,10 @@
         {
             "name": "Panitia - Pendaftaran",
             "description": "Panitia - Pendaftaran"
+        },
+        {
+            "name": "Pengaturan Pembayaran",
+            "description": "Pengaturan Pembayaran"
         },
         {
             "name": "Akun - Profil",

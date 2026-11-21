@@ -10,6 +10,38 @@ use Illuminate\Support\Facades\Storage;
 
 class PengaturanPembayaranController extends Controller
 {
+    /**
+     * Mengambil pengaturan pembayaran iuran.
+     *
+     * @OA\Get(
+     *     path="/api/pengaturan-pembayaran",
+     *     operationId="getPengaturanPembayaran",
+     *     tags={"Pengaturan Pembayaran"},
+     *     summary="Melihat pengaturan pembayaran",
+     *     description="Mengambil informasi rekening bank dan QRIS untuk pembayaran iuran.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pengaturan pembayaran berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Pengaturan pembayaran berhasil diambil."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 nullable=true,
+     *                 @OA\Property(property="id_pengaturan", type="integer", example=1),
+     *                 @OA\Property(property="nama_bank", type="string", nullable=true, example="BCA"),
+     *                 @OA\Property(property="nomor_rekening", type="string", nullable=true, example="1234567890"),
+     *                 @OA\Property(property="atas_nama", type="string", nullable=true, example="Panitia 17 Agustus"),
+     *                 @OA\Property(property="qris_image", type="string", nullable=true, example="https://example.com/storage/pembayaran/qris/qris.png")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Tidak memiliki hak akses")
+     * )
+     */
     public function show(): JsonResponse
     {
         $settings = PengaturanPembayaran::query()->first();
@@ -21,6 +53,55 @@ class PengaturanPembayaranController extends Controller
         ]);
     }
 
+    /**
+     * Memperbarui pengaturan pembayaran iuran.
+     *
+     * @OA\Put(
+     *     path="/api/pengaturan-pembayaran",
+     *     operationId="updatePengaturanPembayaran",
+     *     tags={"Pengaturan Pembayaran"},
+     *     summary="Mengubah pengaturan pembayaran",
+     *     description="Admin atau Panitia dapat mengubah informasi rekening bank dan mengunggah gambar QRIS.",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(property="nama_bank", type="string", maxLength=100, example="BCA"),
+     *                 @OA\Property(property="nomor_rekening", type="string", maxLength=50, example="1234567890"),
+     *                 @OA\Property(property="atas_nama", type="string", maxLength=150, example="Panitia 17 Agustus"),
+     *                 @OA\Property(
+     *                     property="qris_image",
+     *                     type="string",
+     *                     format="binary",
+     *                     description="File gambar QRIS (JPEG, JPG, PNG, WebP), maksimal 5 MB"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pengaturan pembayaran berhasil diperbarui",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Pengaturan pembayaran berhasil diperbarui."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id_pengaturan", type="integer", example=1),
+     *                 @OA\Property(property="nama_bank", type="string", nullable=true, example="BCA"),
+     *                 @OA\Property(property="nomor_rekening", type="string", nullable=true, example="1234567890"),
+     *                 @OA\Property(property="atas_nama", type="string", nullable=true, example="Panitia 17 Agustus"),
+     *                 @OA\Property(property="qris_image", type="string", nullable=true, example="https://example.com/storage/pembayaran/qris/qris.png")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Tidak memiliki hak akses"),
+     *     @OA\Response(response=422, description="Data tidak valid")
+     * )
+     */
     public function update(Request $request): JsonResponse
     {
         $validated = $request->validate([
