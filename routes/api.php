@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\JadwalManagementController;
 use App\Http\Controllers\Api\PertandinganManagementController;
 use App\Http\Controllers\Api\DokumentasiController;
 use App\Http\Controllers\Api\HistoriController;
+use App\Http\Controllers\Api\PengaturanPembayaranController;
 
 // ==============================
 // AUTHENTICATION
@@ -433,6 +434,15 @@ Route::middleware(['auth:sanctum', 'role:Admin,Panitia'])->group(function () {
     Route::delete('/dokumentasi/{id_album}', [DokumentasiController::class, 'destroy'])->whereNumber('id_album');
     Route::post('/dokumentasi/{id_album}/media', [DokumentasiController::class, 'uploadMedia'])->whereNumber('id_album');
     Route::delete('/dokumentasi/{id_album}/media/{id_dokumentasi}', [DokumentasiController::class, 'destroyMedia'])->whereNumber(['id_album', 'id_dokumentasi']);
+});
+
+// PT-03: Pengaturan rekening dan QRIS.
+Route::middleware(['auth:sanctum', 'role:Admin,Panitia,Warga'])->group(function () {
+    Route::get('/pengaturan-pembayaran', [PengaturanPembayaranController::class, 'show']);
+});
+
+Route::middleware(['auth:sanctum', 'role:Admin,Panitia'])->group(function () {
+    Route::put('/pengaturan-pembayaran', [PengaturanPembayaranController::class, 'update']);
 });
 
 // PT-04: Histori. Semua role dapat membaca; Admin dan Panitia dapat mengelola.
