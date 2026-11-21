@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\PertandinganManagementController;
 use App\Http\Controllers\Api\DokumentasiController;
 use App\Http\Controllers\Api\HistoriController;
 use App\Http\Controllers\Api\PengaturanPembayaranController;
+use App\Http\Controllers\Api\UmumController;
 
 // ==============================
 // AUTHENTICATION
@@ -422,11 +423,16 @@ Route::middleware([
 
 });
 
+// API Umum / guest: data publik untuk landing page.
+Route::get('/beranda', [BerandaController::class, 'index']);
+Route::get('/lomba', [LombaController::class, 'index']);
+Route::get('/lomba/{id}', [LombaController::class, 'show'])->whereNumber('id');
+Route::get('/jadwal', [UmumController::class, 'jadwal']);
+Route::get('/pengumuman', [UmumController::class, 'pengumuman']);
+
 // PT-04: Dokumentasi. Semua role dapat membaca; Admin dan Panitia dapat mengelola.
-Route::middleware(['auth:sanctum', 'role:Admin,Panitia,Warga'])->group(function () {
-    Route::get('/dokumentasi', [DokumentasiController::class, 'index']);
-    Route::get('/dokumentasi/{id_album}', [DokumentasiController::class, 'show'])->whereNumber('id_album');
-});
+Route::get('/dokumentasi', [DokumentasiController::class, 'index']);
+Route::get('/dokumentasi/{id_album}', [DokumentasiController::class, 'show'])->whereNumber('id_album');
 
 Route::middleware(['auth:sanctum', 'role:Admin,Panitia'])->group(function () {
     Route::post('/dokumentasi', [DokumentasiController::class, 'store']);

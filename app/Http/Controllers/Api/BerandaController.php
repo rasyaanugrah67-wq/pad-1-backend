@@ -11,12 +11,11 @@ class BerandaController extends Controller
 {
     /**
      * @OA\Get(
-     *     path="/api/warga/beranda",
-     *     operationId="getBerandaWarga",
-     *     tags={"Beranda Warga"},
-     *     summary="Menampilkan data beranda warga",
-     *     description="Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung.",
-     *     security={{"sanctum":{}}},
+     *     path="/api/beranda",
+     *     operationId="getBerandaUmum",
+     *     tags={"Role Umum"},
+     *     summary="Menampilkan data beranda publik",
+     *     description="Mengambil banner, jadwal lomba, pengumuman terbaru, dan pertandingan yang sedang berlangsung untuk guest.",
      *
      *     @OA\Parameter(
      *         name="tanggal",
@@ -104,8 +103,6 @@ class BerandaController extends Controller
      *         )
      *     ),
      *
-     *     @OA\Response(response=401, description="Pengguna belum login"),
-     *     @OA\Response(response=403, description="Pengguna tidak memiliki role Warga"),
      *     @OA\Response(response=422, description="Format tanggal tidak valid")
      * )
      */

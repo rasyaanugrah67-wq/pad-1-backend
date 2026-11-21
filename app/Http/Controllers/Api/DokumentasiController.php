@@ -16,11 +16,10 @@ class DokumentasiController extends Controller
     /**
      * @OA\Get(
      *     path="/api/dokumentasi",
-     *     operationId="getDaftarAlbumDokumentasi",
-     *     tags={"Dokumentasi"},
-     *     summary="Mengambil daftar album dokumentasi",
-     *     description="Dapat diakses oleh Admin, Panitia, dan Warga.",
-     *     security={{"sanctum":{}}},
+     *     operationId="getDaftarAlbumDokumentasiUmum",
+     *     tags={"Role Umum"},
+     *     summary="Mengambil daftar album dokumentasi publik",
+     *     description="Daftar album dokumentasi yang dapat diakses tanpa login.",
      *     @OA\Parameter(
      *         name="search",
      *         in="query",
@@ -51,7 +50,7 @@ class DokumentasiController extends Controller
      *             @OA\Property(property="data", type="array", @OA\Items(type="object"))
      *         )
      *     ),
-     *     @OA\Response(response=401, description="Unauthenticated")
+     *     @OA\Response(response=422, description="Parameter filter tidak valid")
      * )
      */
     public function index(Request $request): JsonResponse
@@ -92,11 +91,10 @@ class DokumentasiController extends Controller
     /**
      * @OA\Get(
      *     path="/api/dokumentasi/{id_album}",
-     *     operationId="getDetailAlbumDokumentasi",
-     *     tags={"Dokumentasi"},
-     *     summary="Mengambil detail album dokumentasi",
-     *     description="Dapat diakses oleh Admin, Panitia, dan Warga.",
-     *     security={{"sanctum":{}}},
+     *     operationId="getDetailAlbumDokumentasiUmum",
+     *     tags={"Role Umum"},
+     *     summary="Mengambil detail album dokumentasi publik",
+     *     description="Detail album dan media dokumentasi yang dapat diakses tanpa login.",
      *     @OA\Parameter(
      *         name="id_album",
      *         in="path",
@@ -113,7 +111,6 @@ class DokumentasiController extends Controller
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
-     *     @OA\Response(response=401, description="Unauthenticated"),
      *     @OA\Response(response=404, description="Album dokumentasi tidak ditemukan")
      * )
      */

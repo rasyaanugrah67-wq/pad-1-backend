@@ -14,12 +14,11 @@ class LombaController extends Controller
 {
     /**
      * @OA\Get(
-     *     path="/api/warga/lomba",
-     *     operationId="getDaftarLombaWarga",
-     *     tags={"Warga - Lomba"},
-     *     summary="Menampilkan daftar lomba",
+     *     path="/api/lomba",
+     *     operationId="getDaftarLombaUmum",
+     *     tags={"Role Umum"},
+     *     summary="Menampilkan daftar lomba publik",
      *     description="Mengambil daftar lomba pada periode aktif. Mendukung pencarian nama lomba, filter status, dan filter tanggal. Informasi kapasitas peserta dan batas anggota tim turut ditampilkan.",
-     *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="search",
      *         in="query",
@@ -91,7 +90,7 @@ class LombaController extends Controller
      *             )
      *         )
      *     ),
-     *     @OA\Response(response=401, description="Belum terautentikasi")
+     *     @OA\Response(response=422, description="Parameter filter tidak valid")
      * )
      */
     public function index(Request $request): JsonResponse
@@ -166,7 +165,7 @@ class LombaController extends Controller
 
         $lomba = $query->orderBy('nama_lomba')->get();
 
-        $idWarga = $request->user()->id_warga ?? null;
+        $idWarga = $request->user()?->id_warga;
 
         $data = $lomba->map(function ($item) use ($idWarga) {
             return $this->formatLomba($item, $idWarga);
@@ -200,12 +199,11 @@ class LombaController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/warga/lomba/{id}",
-     *     operationId="getDetailLombaWarga",
-     *     tags={"Warga - Lomba"},
-     *     summary="Menampilkan detail lomba",
+     *     path="/api/lomba/{id}",
+     *     operationId="getDetailLombaUmum",
+     *     tags={"Role Umum"},
+     *     summary="Menampilkan detail lomba publik",
      *     description="Mengambil informasi lengkap lomba, termasuk kategori, jadwal, persyaratan, alur, peraturan, kapasitas peserta, dan batas anggota tim.",
-     *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -262,7 +260,6 @@ class LombaController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=404, description="Lomba tidak ditemukan atau periode aktif belum tersedia"),
-     *     @OA\Response(response=401, description="Belum terautentikasi")
      * )
      */
     public function show(Request $request, int $id): JsonResponse
@@ -301,7 +298,7 @@ class LombaController extends Controller
             ], 404);
         }
 
-        $idWarga = $request->user()->id_warga ?? null;
+        $idWarga = $request->user()?->id_warga;
 
         $data = $this->formatLomba($lomba, $idWarga, true);
 

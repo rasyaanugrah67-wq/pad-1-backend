@@ -7,6 +7,7 @@
 /vendor
 .env
 .env.backup
+.env.local-backup
 .env.production
 .env.aiven
 .phpunit.result.cache
