@@ -524,8 +524,8 @@ class IuranController extends Controller
      *     path="/api/warga/iuran/transparansi",
      *     operationId="getTransparansiIuran",
      *     tags={"Warga - Iuran"},
-     *     summary="Melihat transparansi pembayaran iuran",
-     *     security={{"sanctum":{}}},
+     *     summary="Melihat transparansi pembayaran iuran warga (Publik)",
+     *     description="Dapat diakses secara publik oleh Guest tanpa autentikasi, serta oleh Warga, Panitia, dan Admin.",
      *     @OA\Parameter(
      *         name="status",
      *         in="query",
@@ -533,9 +533,16 @@ class IuranController extends Controller
      *         description="Filter status pembayaran",
      *         @OA\Schema(
      *             type="string",
-     *             enum={"Semua", "Lunas", "Belum Lunas"},
+     *             enum={"Semua", "Lunas", "Belum Lunas", "Menunggu Konfirmasi"},
      *             example="Semua"
      *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="id_periode",
+     *         in="query",
+     *         required=false,
+     *         description="Filter berdasarkan ID Periode",
+     *         @OA\Schema(type="integer", example=1)
      *     ),
      *     @OA\Parameter(
      *         name="search",
@@ -560,7 +567,6 @@ class IuranController extends Controller
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
-     *     @OA\Response(response=401, description="Belum login"),
      *     @OA\Response(response=422, description="Parameter tidak valid")
      * )
      */
@@ -569,22 +575,29 @@ class IuranController extends Controller
         $validated = $request->validate([
             'status' => [
                 'nullable', 
-                Rule::in(['Semua', 'Lunas', 'Belum Lunas']),
+                Rule::in(['Semua', 'Lunas', 'Belum Lunas', 'Menunggu Konfirmasi']),
             ],
+            'id_periode' => ['nullable', 'integer', 'exists:periode,id_periode'],
             'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         $status = $validated['status'] ?? 'Semua';
+        $idPeriode = $validated['id_periode'] ?? null;
         $search = $validated['search'] ?? null;
         $perPage = $validated['per_page'] ?? 10;
 
         $query = Iuran::with([
             'warga:id_warga,nama',
+            'periode:id_periode,tahun,nama_kegiatan',
             'pembayaran' => function ($q) {
                 $q->orderByDesc('created_at');
             },
         ]);
+
+        if ($idPeriode) {
+            $query->where('id_periode', $idPeriode);
+        }
 
         if ($status === 'Lunas') {
             $query->where('status', 'Sudah Bayar');
@@ -618,6 +631,12 @@ class IuranController extends Controller
 
             return [
                 'id_iuran' => $iuran->id_iuran,
+                'id_periode' => $iuran->id_periode,
+                'periode' => $iuran->periode ? [
+                    'id_periode' => $iuran->periode->id_periode,
+                    'tahun' => $iuran->periode->tahun,
+                    'nama_kegiatan' => $iuran->periode->nama_kegiatan,
+                ] : null,
                 'nama_kepala_keluarga' => $iuran->warga?->nama,
                 'nominal' => $iuran->nominal,
                 'status' => $statusTampilan,
@@ -626,6 +645,14 @@ class IuranController extends Controller
                     : null,
             ];
         });
+
+        // Filter status 'Menunggu Konfirmasi' jika diminta setelah status display dihitung
+        if ($status === 'Menunggu Konfirmasi') {
+            $filteredCollection = $data->getCollection()->filter(function ($item) {
+                return $item['status'] === 'Menunggu Konfirmasi';
+            })->values();
+            $data->setCollection($filteredCollection);
+        }
 
         return response()->json([
             'success' => true,

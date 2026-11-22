@@ -205,6 +205,22 @@ Route::middleware([
 // WARGA
 // ==============================
 
+// Data publik yang tetap memakai URL legacy FE dengan prefix /warga.
+Route::get('/warga/beranda', [
+    BerandaController::class,
+    'index'
+]);
+
+Route::get('/warga/lomba', [
+    LombaController::class,
+    'index'
+]);
+
+Route::get('/warga/lomba/{id}', [
+    LombaController::class,
+    'show'
+])->whereNumber('id');
+
 Route::middleware([
     "auth:sanctum",
     "role:Warga",
@@ -216,27 +232,6 @@ Route::middleware([
         DashboardController::class,
         'warga'
     ]);
-
-
-    // PB-02: Beranda
-
-    Route::get('/beranda', [
-        BerandaController::class,
-        'index'
-    ]);
-
-
-    // PB-03: Lomba
-
-    Route::get('/lomba', [
-        LombaController::class,
-        'index'
-    ]);
-
-    Route::get('/lomba/{id}', [
-        LombaController::class,
-        'show'
-    ])->whereNumber('id');
 
 
     // PB-04: Pendaftaran
@@ -407,21 +402,17 @@ Route::middleware('auth:sanctum')->get(
 
 
 // ==============================
-// TRANSPARANSI IURAN
+// TRANSPARANSI IURAN (PUBLIK / GUEST)
 // ==============================
-// Dapat diakses Admin, Panitia, dan Warga.
-
-Route::middleware([
-    'auth:sanctum',
-    'role:Admin,Panitia,Warga',
-])->group(function () {
-
-    Route::get('/warga/iuran/transparansi', [
-        IuranController::class,
-        'transparansi'
-    ]);
-
-});
+// Dapat diakses secara publik tanpa login oleh semua orang (Guest, Warga, Panitia, Admin).
+Route::get('/warga/iuran/transparansi', [
+    IuranController::class,
+    'transparansi'
+]);
+Route::get('/iuran/transparansi', [
+    IuranController::class,
+    'transparansi'
+]);
 
 // API Umum / guest: data publik untuk landing page.
 Route::get('/beranda', [BerandaController::class, 'index']);
@@ -431,8 +422,10 @@ Route::get('/jadwal', [UmumController::class, 'jadwal']);
 Route::get('/pengumuman', [UmumController::class, 'pengumuman']);
 
 // PT-04: Dokumentasi. Semua role dapat membaca; Admin dan Panitia dapat mengelola.
-Route::get('/dokumentasi', [DokumentasiController::class, 'index']);
-Route::get('/dokumentasi/{id_album}', [DokumentasiController::class, 'show'])->whereNumber('id_album');
+Route::middleware(['auth:sanctum', 'role:Admin,Panitia,Warga'])->group(function () {
+    Route::get('/dokumentasi', [DokumentasiController::class, 'index']);
+    Route::get('/dokumentasi/{id_album}', [DokumentasiController::class, 'show'])->whereNumber('id_album');
+});
 
 Route::middleware(['auth:sanctum', 'role:Admin,Panitia'])->group(function () {
     Route::post('/dokumentasi', [DokumentasiController::class, 'store']);

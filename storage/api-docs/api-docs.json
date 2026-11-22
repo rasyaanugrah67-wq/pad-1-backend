@@ -2144,8 +2144,8 @@
                 "tags": [
                     "Warga - Iuran"
                 ],
-                "summary": "Melihat transparansi pembayaran iuran",
-                "description": "Mengambil transparansi iuran seluruh warga.",
+                "summary": "Melihat transparansi pembayaran iuran warga (Publik)",
+                "description": "Dapat diakses secara publik oleh Guest tanpa autentikasi, serta oleh Warga, Panitia, dan Admin.",
                 "operationId": "getTransparansiIuran",
                 "parameters": [
                     {
@@ -2158,9 +2158,20 @@
                             "enum": [
                                 "Semua",
                                 "Lunas",
-                                "Belum Lunas"
+                                "Belum Lunas",
+                                "Menunggu Konfirmasi"
                             ],
                             "example": "Semua"
+                        }
+                    },
+                    {
+                        "name": "id_periode",
+                        "in": "query",
+                        "description": "Filter berdasarkan ID Periode",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
                         }
                     },
                     {
@@ -2209,18 +2220,10 @@
                             }
                         }
                     },
-                    "401": {
-                        "description": "Belum login"
-                    },
                     "422": {
                         "description": "Parameter tidak valid"
                     }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
+                }
             }
         },
         "/api/manajemen/iuran": {
