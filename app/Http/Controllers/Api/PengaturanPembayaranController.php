@@ -183,8 +183,21 @@ class PengaturanPembayaranController extends Controller
                 $cloudinaryPublicId = $upload['public_id'] ?? null;
                 $validated['qris_image'] = $uploadedQrisUrl;
             } catch (Throwable $e) {
-                Log::error('Gagal mengunggah QRIS ke Cloudinary: ' . $e->getMessage(), [
-                    'exception' => $e
+                $safeMessage = preg_replace(
+                    '/(cloudinary:\/\/[^:]+:)[^@]+(@)/i',
+                    '$1[REDACTED]$2',
+                    $e->getMessage()
+                );
+
+                Log::error('Gagal mengunggah QRIS ke Cloudinary.', [
+                    'exception_class' => $e::class,
+                    'exception_message' => $safeMessage,
+                    'exception_code' => $e->getCode(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'file_name' => $request->file('qris_image')?->getClientOriginalName(),
+                    'file_mime' => $request->file('qris_image')?->getMimeType(),
+                    'file_size' => $request->file('qris_image')?->getSize(),
                 ]);
 
                 return response()->json([
