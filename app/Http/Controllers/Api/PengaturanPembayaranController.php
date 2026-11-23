@@ -59,12 +59,12 @@ class PengaturanPembayaranController extends Controller
     /**
      * Memperbarui pengaturan pembayaran iuran.
      *
-     * @OA\Put(
+     * @OA\Post(
      *     path="/api/pengaturan-pembayaran",
-     *     operationId="updatePengaturanPembayaran",
+     *     operationId="updatePengaturanPembayaranPost",
      *     tags={"Pengaturan Pembayaran"},
-     *     summary="Mengubah pengaturan pembayaran",
-     *     description="Admin atau Panitia dapat mengubah informasi rekening bank dan mengunggah gambar QRIS.",
+     *     summary="Mengubah pengaturan pembayaran dan upload QRIS (POST multipart/form-data)",
+     *     description="Admin atau Panitia dapat mengubah informasi rekening bank dan mengunggah gambar QRIS. Direkomendasikan menggunakan HTTP POST multipart/form-data agar upload file terbaca dengan baik oleh server.",
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=false,
@@ -102,7 +102,55 @@ class PengaturanPembayaranController extends Controller
      *     ),
      *     @OA\Response(response=401, description="Belum login"),
      *     @OA\Response(response=403, description="Tidak memiliki hak akses"),
-     *     @OA\Response(response=422, description="Data tidak valid")
+     *     @OA\Response(response=422, description="Data tidak valid"),
+     *     @OA\Response(response=500, description="Gagal mengunggah gambar QRIS ke penyimpanan cloud")
+     * )
+     *
+     * @OA\Put(
+     *     path="/api/pengaturan-pembayaran",
+     *     operationId="updatePengaturanPembayaran",
+     *     tags={"Pengaturan Pembayaran"},
+     *     summary="Mengubah pengaturan pembayaran (PUT)",
+     *     description="Admin atau Panitia dapat mengubah informasi rekening bank. Jika menyertakan file pada PUT, gunakan method spoofing _method=PUT atau gunakan POST.",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(property="nama_bank", type="string", maxLength=100, example="BCA"),
+     *                 @OA\Property(property="nomor_rekening", type="string", maxLength=50, example="1234567890"),
+     *                 @OA\Property(property="atas_nama", type="string", maxLength=150, example="Panitia 17 Agustus"),
+     *                 @OA\Property(
+     *                     property="qris_image",
+     *                     type="string",
+     *                     format="binary",
+     *                     description="File gambar QRIS (JPEG, JPG, PNG, WebP), maksimal 5 MB"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Pengaturan pembayaran berhasil diperbarui",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Pengaturan pembayaran berhasil diperbarui."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id_pengaturan", type="integer", example=1),
+     *                 @OA\Property(property="nama_bank", type="string", nullable=true, example="BCA"),
+     *                 @OA\Property(property="nomor_rekening", type="string", nullable=true, example="1234567890"),
+     *                 @OA\Property(property="atas_nama", type="string", nullable=true, example="Panitia 17 Agustus"),
+     *                 @OA\Property(property="qris_image", type="string", nullable=true, example="https://res.cloudinary.com/.../image/upload/.../qris.png")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Tidak memiliki hak akses"),
+     *     @OA\Response(response=422, description="Data tidak valid"),
+     *     @OA\Response(response=500, description="Gagal mengunggah gambar QRIS ke penyimpanan cloud")
      * )
      */
     public function update(Request $request): JsonResponse

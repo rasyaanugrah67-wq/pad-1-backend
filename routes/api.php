@@ -441,6 +441,7 @@ Route::middleware(['auth:sanctum', 'role:Admin,Panitia,Warga'])->group(function 
 });
 
 Route::middleware(['auth:sanctum', 'role:Admin,Panitia'])->group(function () {
+    Route::post('/pengaturan-pembayaran', [PengaturanPembayaranController::class, 'update']);
     Route::put('/pengaturan-pembayaran', [PengaturanPembayaranController::class, 'update']);
 });
 
