@@ -3643,7 +3643,7 @@
                                                 },
                                                 "qris_image": {
                                                     "type": "string",
-                                                    "example": "https://example.com/storage/pembayaran/qris/qris.png",
+                                                    "example": "https://res.cloudinary.com/.../image/upload/.../qris.png",
                                                     "nullable": true
                                                 }
                                             },
@@ -3746,7 +3746,7 @@
                                                 },
                                                 "qris_image": {
                                                     "type": "string",
-                                                    "example": "https://example.com/storage/pembayaran/qris/qris.png",
+                                                    "example": "https://res.cloudinary.com/.../image/upload/.../qris.png",
                                                     "nullable": true
                                                 }
                                             },

@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\PengaturanPembayaran;
+use Cloudinary\Cloudinary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class PengaturanPembayaranController extends Controller
 {
@@ -34,7 +37,7 @@ class PengaturanPembayaranController extends Controller
      *                 @OA\Property(property="nama_bank", type="string", nullable=true, example="BCA"),
      *                 @OA\Property(property="nomor_rekening", type="string", nullable=true, example="1234567890"),
      *                 @OA\Property(property="atas_nama", type="string", nullable=true, example="Panitia 17 Agustus"),
-     *                 @OA\Property(property="qris_image", type="string", nullable=true, example="https://example.com/storage/pembayaran/qris/qris.png")
+     *                 @OA\Property(property="qris_image", type="string", nullable=true, example="https://res.cloudinary.com/.../image/upload/.../qris.png")
      *             )
      *         )
      *     ),
@@ -93,7 +96,7 @@ class PengaturanPembayaranController extends Controller
      *                 @OA\Property(property="nama_bank", type="string", nullable=true, example="BCA"),
      *                 @OA\Property(property="nomor_rekening", type="string", nullable=true, example="1234567890"),
      *                 @OA\Property(property="atas_nama", type="string", nullable=true, example="Panitia 17 Agustus"),
-     *                 @OA\Property(property="qris_image", type="string", nullable=true, example="https://example.com/storage/pembayaran/qris/qris.png")
+     *                 @OA\Property(property="qris_image", type="string", nullable=true, example="https://res.cloudinary.com/.../image/upload/.../qris.png")
      *             )
      *         )
      *     ),
@@ -113,11 +116,34 @@ class PengaturanPembayaranController extends Controller
 
         $settings = PengaturanPembayaran::query()->first();
         $oldQris = $settings?->qris_image;
-        $newQris = null;
+        $uploadedQrisUrl = null;
+        $cloudinaryPublicId = null;
+        $cloudinary = null;
 
         if ($request->hasFile('qris_image')) {
-            $newQris = $request->file('qris_image')->store('pembayaran/qris', 'public');
-            $validated['qris_image'] = $newQris;
+            try {
+                $cloudinary = new Cloudinary();
+                $upload = $cloudinary->uploadApi()->upload(
+                    $request->file('qris_image')->getRealPath(),
+                    [
+                        'folder' => 'pad/qris',
+                        'resource_type' => 'image',
+                    ]
+                );
+
+                $uploadedQrisUrl = $upload['secure_url'] ?? $upload['url'];
+                $cloudinaryPublicId = $upload['public_id'] ?? null;
+                $validated['qris_image'] = $uploadedQrisUrl;
+            } catch (Throwable $e) {
+                Log::error('Gagal mengunggah QRIS ke Cloudinary: ' . $e->getMessage(), [
+                    'exception' => $e
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengunggah gambar QRIS ke penyimpanan cloud. Silakan coba kembali.',
+                ], 500);
+            }
         }
 
         try {
@@ -126,12 +152,21 @@ class PengaturanPembayaranController extends Controller
             } else {
                 $settings = PengaturanPembayaran::create($validated);
             }
-        } catch (\Throwable $e) {
-            if ($newQris) Storage::disk('public')->delete($newQris);
+        } catch (Throwable $e) {
+            if ($cloudinary && $cloudinaryPublicId) {
+                try {
+                    $cloudinary->uploadApi()->destroy($cloudinaryPublicId, [
+                        'resource_type' => 'image',
+                    ]);
+                } catch (Throwable $cleanupError) {
+                    report($cleanupError);
+                }
+            }
             throw $e;
         }
 
-        if ($newQris && $oldQris) {
+        // Hapus file QRIS lama jika sebelumnya disimpan di storage lokal
+        if ($uploadedQrisUrl && $oldQris && !str_starts_with($oldQris, 'http://') && !str_starts_with($oldQris, 'https://')) {
             Storage::disk('public')->delete($oldQris);
         }
 
@@ -146,14 +181,21 @@ class PengaturanPembayaranController extends Controller
     {
         if (!$settings) return null;
 
+        $qrisUrl = null;
+        if ($settings->qris_image) {
+            if (str_starts_with($settings->qris_image, 'http://') || str_starts_with($settings->qris_image, 'https://')) {
+                $qrisUrl = $settings->qris_image;
+            } else {
+                $qrisUrl = Storage::disk('public')->url($settings->qris_image);
+            }
+        }
+
         return [
             'id_pengaturan' => $settings->id_pengaturan,
             'nama_bank' => $settings->nama_bank,
             'nomor_rekening' => $settings->nomor_rekening,
             'atas_nama' => $settings->atas_nama,
-            'qris_image' => $settings->qris_image
-                ? Storage::disk('public')->url($settings->qris_image)
-                : null,
+            'qris_image' => $qrisUrl,
         ];
     }
 }
