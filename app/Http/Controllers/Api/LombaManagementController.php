@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use OpenApi\Annotations as OA;
 
 class LombaManagementController extends Controller
 {
@@ -30,7 +31,7 @@ class LombaManagementController extends Controller
                     'Dibatalkan',
                 ]);
             },
-        ]);
+        ])->where('is_arsip', false);
 
         // Search nama lomba, kategori, dan lokasi.
         if ($request->filled('search')) {
@@ -104,6 +105,7 @@ class LombaManagementController extends Controller
                 'kapasitas_peserta' => $item->kapasitas_peserta,
                 'batas_anggota_tim' => $item->batas_anggota_tim,
                 'jumlah_pendaftar' => $item->jumlah_pendaftar,
+                'is_arsip' => (bool) $item->is_arsip,
                 'jadwal' => $item->jadwal->map(function ($jadwal) {
                     return [
                         'id_jadwal' => $jadwal->id_jadwal,
@@ -124,8 +126,8 @@ class LombaManagementController extends Controller
             });
         }
 
-        // Statistik seluruh lomba, tidak terpengaruh pencarian/filter.
-        $semuaLomba = Lomba::with('jadwal')->get();
+        // Statistik seluruh lomba aktif, tidak terpengaruh pencarian/filter.
+        $semuaLomba = Lomba::where('is_arsip', false)->with('jadwal')->get();
 
         $total = $semuaLomba->count();
         $berlangsung = 0;
@@ -632,6 +634,335 @@ public function destroy($id_lomba): JsonResponse
     return response()->json([
         'success' => true,
         'message' => 'Lomba berhasil dihapus.',
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/lomba/manage/arsip",
+     *     operationId="getDaftarLombaArsip",
+     *     tags={"Manajemen Lomba"},
+     *     summary="Mengambil daftar lomba arsip",
+     *     description="Menampilkan hanya lomba yang sudah diarsipkan. Hanya dapat diakses oleh Admin dan Panitia. Mendukung pencarian dan pagination.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         required=false,
+     *         description="Pencarian berdasarkan nama lomba, kategori, atau lokasi",
+     *         @OA\Schema(type="string", example="Futsal")
+     *     ),
+     *     @OA\Parameter(
+     *         name="kategori",
+     *         in="query",
+     *         required=false,
+     *         description="Filter berdasarkan nama kategori",
+     *         @OA\Schema(type="string", example="Umum")
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         required=false,
+     *         description="Jumlah data per halaman (opsional, jika ingin menggunakan pagination)",
+     *         @OA\Schema(type="integer", example=10)
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         required=false,
+     *         description="Halaman pagination",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Daftar lomba arsip berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Daftar lomba arsip berhasil diambil."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id_lomba", type="integer", example=1),
+     *                     @OA\Property(property="nama_lomba", type="string", example="Tarik Tambang"),
+     *                     @OA\Property(property="jenis_pendaftaran", type="string", example="Beregu"),
+     *                     @OA\Property(property="status", type="string", example="Dibuka"),
+     *                     @OA\Property(property="status_lomba", type="string", example="Selesai"),
+     *                     @OA\Property(property="kategori", type="string", example="Dewasa"),
+     *                     @OA\Property(property="deskripsi", type="string", nullable=true),
+     *                     @OA\Property(property="gambar", type="string", nullable=true),
+     *                     @OA\Property(property="kapasitas_peserta", type="integer", nullable=true, example=8),
+     *                     @OA\Property(property="batas_anggota_tim", type="integer", nullable=true, example=5),
+     *                     @OA\Property(property="jumlah_pendaftar", type="integer", example=4),
+     *                     @OA\Property(property="lokasi", type="string", nullable=true, example="Lapangan RW"),
+     *                     @OA\Property(property="is_arsip", type="boolean", example=true),
+     *                     @OA\Property(property="detail", type="object", nullable=true),
+     *                     @OA\Property(property="jadwal", type="array", @OA\Items(type="object"))
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin dan Panitia)")
+     * )
+     */
+    public function arsipIndex(Request $request): JsonResponse
+    {
+        $today = Carbon::today('Asia/Jakarta')->toDateString();
+
+        $query = Lomba::with([
+            'kategori',
+            'detail',
+            'jadwal',
+        ])->withCount([
+            'pendaftaran as jumlah_pendaftar' => function ($query) {
+                $query->whereNotIn('status', [
+                    'Ditolak',
+                    'Dibatalkan',
+                ]);
+            },
+        ])->where('is_arsip', true);
+
+        // Search nama lomba, kategori, dan lokasi.
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_lomba', 'like', "%{$search}%")
+                    ->orWhereHas('kategori', function ($kategori) use ($search) {
+                        $kategori->where('nama_kategori', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('jadwal', function ($jadwal) use ($search) {
+                        $jadwal->where('lokasi', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Filter kategori.
+        if ($request->filled('kategori')) {
+            $kategori = $request->kategori;
+
+            $query->whereHas('kategori', function ($q) use ($kategori) {
+                $q->where('nama_kategori', 'like', "%{$kategori}%");
+            });
+        }
+
+        $query->orderBy('updated_at', 'desc');
+
+        $formatItem = function ($item) use ($today) {
+            $tanggalJadwal = $item->jadwal
+                ->map(function ($jadwal) {
+                    return Carbon::parse($jadwal->tanggal)->toDateString();
+                });
+
+            if ($tanggalJadwal->contains($today)) {
+                $statusLomba = 'Berlangsung';
+            } elseif ($tanggalJadwal->contains(function ($tanggal) use ($today) {
+                return $tanggal > $today;
+            })) {
+                $statusLomba = 'Mendatang';
+            } elseif (
+                $tanggalJadwal->isNotEmpty()
+                && $tanggalJadwal->every(function ($tanggal) use ($today) {
+                    return $tanggal < $today;
+                })
+            ) {
+                $statusLomba = 'Selesai';
+            } else {
+                $statusLomba = 'Belum Dijadwalkan';
+            }
+
+            $lokasiList = $item->jadwal
+                ->pluck('lokasi')
+                ->filter()
+                ->unique()
+                ->values();
+
+            return [
+                'id_lomba' => $item->id_lomba,
+                'nama_lomba' => $item->nama_lomba,
+                'jenis_pendaftaran' => $item->jenis_pendaftaran,
+                'status' => $item->status,
+                'status_lomba' => $statusLomba,
+                'kategori' => $item->kategori?->nama_kategori,
+                'deskripsi' => $item->deskripsi,
+                'gambar' => $item->gambar,
+                'kapasitas_peserta' => $item->kapasitas_peserta,
+                'batas_anggota_tim' => $item->batas_anggota_tim,
+                'jumlah_pendaftar' => $item->jumlah_pendaftar,
+                'lokasi' => $lokasiList->implode(', ') ?: null,
+                'is_arsip' => (bool) $item->is_arsip,
+                'detail' => $item->detail,
+                'jadwal' => $item->jadwal->map(function ($jadwal) {
+                    return [
+                        'id_jadwal' => $jadwal->id_jadwal,
+                        'tanggal' => Carbon::parse($jadwal->tanggal)->toDateString(),
+                        'waktu_mulai' => $jadwal->waktu_mulai,
+                        'waktu_selesai' => $jadwal->waktu_selesai,
+                        'lokasi' => $jadwal->lokasi,
+                    ];
+                })->values(),
+            ];
+        };
+
+        if ($request->filled('per_page')) {
+            $perPage = (int) $request->input('per_page', 15);
+            $paginated = $query->paginate($perPage);
+            $paginated->getCollection()->transform($formatItem);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Daftar lomba arsip berhasil diambil.',
+                'data' => $paginated,
+            ]);
+        }
+
+        $lomba = $query->get()->map($formatItem);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar lomba arsip berhasil diambil.',
+            'data' => $lomba->values(),
+        ]);
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/lomba/manage/{id_lomba}/arsip",
+     *     operationId="arsipLomba",
+     *     tags={"Manajemen Lomba"},
+     *     summary="Mengarsipkan lomba",
+     *     description="Memindahkan lomba dari daftar aktif ke daftar arsip tanpa menghapus data pendaftaran, tim, jadwal, atau relasi lainnya. Hanya untuk Admin dan Panitia.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_lomba",
+     *         in="path",
+     *         required=true,
+     *         description="ID Lomba yang akan diarsipkan",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lomba berhasil diarsipkan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Lomba berhasil diarsipkan."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id_lomba", type="integer", example=1),
+     *                 @OA\Property(property="nama_lomba", type="string", example="Tarik Tambang"),
+     *                 @OA\Property(property="is_arsip", type="boolean", example=true)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin dan Panitia)"),
+     *     @OA\Response(response=404, description="Lomba tidak ditemukan"),
+     *     @OA\Response(response=422, description="Lomba sudah berada dalam arsip")
+     * )
+     */
+    public function arsip($id_lomba): JsonResponse
+    {
+        $lomba = Lomba::find($id_lomba);
+
+        if (!$lomba) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lomba tidak ditemukan.',
+            ], 404);
+        }
+
+        if ($lomba->is_arsip) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lomba sudah berada dalam arsip.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($lomba) {
+            $lomba->is_arsip = true;
+            $lomba->save();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lomba berhasil diarsipkan.',
+            'data' => [
+                'id_lomba' => $lomba->id_lomba,
+                'nama_lomba' => $lomba->nama_lomba,
+                'is_arsip' => (bool) $lomba->is_arsip,
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/lomba/manage/{id_lomba}/pulihkan",
+     *     operationId="pulihkanLomba",
+     *     tags={"Manajemen Lomba"},
+     *     summary="Memulihkan lomba dari arsip",
+     *     description="Mengembalikan lomba dari daftar arsip ke daftar lomba aktif dengan seluruh relasi data tetap utuh. Hanya untuk Admin dan Panitia.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="id_lomba",
+     *         in="path",
+     *         required=true,
+     *         description="ID Lomba yang akan dipulihkan",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lomba berhasil dipulihkan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Lomba berhasil dipulihkan."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id_lomba", type="integer", example=1),
+     *                 @OA\Property(property="nama_lomba", type="string", example="Tarik Tambang"),
+     *                 @OA\Property(property="is_arsip", type="boolean", example=false)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin dan Panitia)"),
+     *     @OA\Response(response=404, description="Lomba tidak ditemukan"),
+     *     @OA\Response(response=422, description="Lomba tidak berada dalam arsip atau sudah aktif")
+     * )
+     */
+    public function pulihkan($id_lomba): JsonResponse
+    {
+        $lomba = Lomba::find($id_lomba);
+
+        if (!$lomba) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lomba tidak ditemukan.',
+            ], 404);
+        }
+
+        if (!$lomba->is_arsip) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lomba tidak berada dalam arsip atau sudah aktif.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($lomba) {
+            $lomba->is_arsip = false;
+            $lomba->save();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lomba berhasil dipulihkan.',
+            'data' => [
+                'id_lomba' => $lomba->id_lomba,
+                'nama_lomba' => $lomba->nama_lomba,
+                'is_arsip' => (bool) $lomba->is_arsip,
+            ],
         ]);
     }
 

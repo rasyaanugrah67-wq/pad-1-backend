@@ -130,7 +130,8 @@ class LombaController extends Controller
             },
         ])
             ->where('id_periode', $periode->id_periode)
-            ->where('status', '!=', 'Nonaktif');
+            ->where('status', '!=', 'Nonaktif')
+            ->where('is_arsip', false);
 
         if ($search) {
             $query->where('nama_lomba', 'like', "%{$search}%");
@@ -287,6 +288,7 @@ class LombaController extends Controller
         ])
             ->where('id_periode', $periode->id_periode)
             ->where('status', '!=', 'Nonaktif')
+            ->where('is_arsip', false)
             ->where('id_lomba', $id)
             ->first();
 

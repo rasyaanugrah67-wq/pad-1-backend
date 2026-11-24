@@ -2725,6 +2725,320 @@
                 }
             }
         },
+        "/api/lomba/manage/arsip": {
+            "get": {
+                "tags": [
+                    "Manajemen Lomba"
+                ],
+                "summary": "Mengambil daftar lomba arsip",
+                "description": "Menampilkan hanya lomba yang sudah diarsipkan. Hanya dapat diakses oleh Admin dan Panitia. Mendukung pencarian dan pagination.",
+                "operationId": "getDaftarLombaArsip",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Pencarian berdasarkan nama lomba, kategori, atau lokasi",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Futsal"
+                        }
+                    },
+                    {
+                        "name": "kategori",
+                        "in": "query",
+                        "description": "Filter berdasarkan nama kategori",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Umum"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Jumlah data per halaman (opsional, jika ingin menggunakan pagination)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 10
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Halaman pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar lomba arsip berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar lomba arsip berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id_lomba": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "nama_lomba": {
+                                                        "type": "string",
+                                                        "example": "Tarik Tambang"
+                                                    },
+                                                    "jenis_pendaftaran": {
+                                                        "type": "string",
+                                                        "example": "Beregu"
+                                                    },
+                                                    "status": {
+                                                        "type": "string",
+                                                        "example": "Dibuka"
+                                                    },
+                                                    "status_lomba": {
+                                                        "type": "string",
+                                                        "example": "Selesai"
+                                                    },
+                                                    "kategori": {
+                                                        "type": "string",
+                                                        "example": "Dewasa"
+                                                    },
+                                                    "deskripsi": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "gambar": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "kapasitas_peserta": {
+                                                        "type": "integer",
+                                                        "example": 8,
+                                                        "nullable": true
+                                                    },
+                                                    "batas_anggota_tim": {
+                                                        "type": "integer",
+                                                        "example": 5,
+                                                        "nullable": true
+                                                    },
+                                                    "jumlah_pendaftar": {
+                                                        "type": "integer",
+                                                        "example": 4
+                                                    },
+                                                    "lokasi": {
+                                                        "type": "string",
+                                                        "example": "Lapangan RW",
+                                                        "nullable": true
+                                                    },
+                                                    "is_arsip": {
+                                                        "type": "boolean",
+                                                        "example": true
+                                                    },
+                                                    "detail": {
+                                                        "type": "object",
+                                                        "nullable": true
+                                                    },
+                                                    "jadwal": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object"
+                                                        }
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin dan Panitia)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/lomba/manage/{id_lomba}/arsip": {
+            "patch": {
+                "tags": [
+                    "Manajemen Lomba"
+                ],
+                "summary": "Mengarsipkan lomba",
+                "description": "Memindahkan lomba dari daftar aktif ke daftar arsip tanpa menghapus data pendaftaran, tim, jadwal, atau relasi lainnya. Hanya untuk Admin dan Panitia.",
+                "operationId": "arsipLomba",
+                "parameters": [
+                    {
+                        "name": "id_lomba",
+                        "in": "path",
+                        "description": "ID Lomba yang akan diarsipkan",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lomba berhasil diarsipkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Lomba berhasil diarsipkan."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id_lomba": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nama_lomba": {
+                                                    "type": "string",
+                                                    "example": "Tarik Tambang"
+                                                },
+                                                "is_arsip": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin dan Panitia)"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Lomba sudah berada dalam arsip"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/lomba/manage/{id_lomba}/pulihkan": {
+            "patch": {
+                "tags": [
+                    "Manajemen Lomba"
+                ],
+                "summary": "Memulihkan lomba dari arsip",
+                "description": "Mengembalikan lomba dari daftar arsip ke daftar lomba aktif dengan seluruh relasi data tetap utuh. Hanya untuk Admin dan Panitia.",
+                "operationId": "pulihkanLomba",
+                "parameters": [
+                    {
+                        "name": "id_lomba",
+                        "in": "path",
+                        "description": "ID Lomba yang akan dipulihkan",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lomba berhasil dipulihkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Lomba berhasil dipulihkan."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id_lomba": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "nama_lomba": {
+                                                    "type": "string",
+                                                    "example": "Tarik Tambang"
+                                                },
+                                                "is_arsip": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin dan Panitia)"
+                    },
+                    "404": {
+                        "description": "Lomba tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Lomba tidak berada dalam arsip atau sudah aktif"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/warga/notifikasi": {
             "get": {
                 "tags": [
@@ -4812,6 +5126,10 @@
         {
             "name": "Manajemen - Iuran",
             "description": "Manajemen - Iuran"
+        },
+        {
+            "name": "Manajemen Lomba",
+            "description": "Manajemen Lomba"
         },
         {
             "name": "Warga - Notifikasi",

@@ -315,10 +315,25 @@ Route::middleware([
     'index'
 ]);
 
+Route::get('/lomba/manage/arsip', [
+    LombaManagementController::class,
+    'arsipIndex'
+]);
+
 Route::post('/lomba/manage', [
     LombaManagementController::class,
     'store'
 ]);
+
+Route::patch('/lomba/manage/{id_lomba}/arsip', [
+    LombaManagementController::class,
+    'arsip'
+])->whereNumber('id_lomba');
+
+Route::patch('/lomba/manage/{id_lomba}/pulihkan', [
+    LombaManagementController::class,
+    'pulihkan'
+])->whereNumber('id_lomba');
 
 
 Route::put('/lomba/manage/{id_lomba}', [

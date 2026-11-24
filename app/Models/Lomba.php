@@ -27,6 +27,10 @@ class Lomba extends Model
         'status',
     ];
 
+    protected $casts = [
+        'is_arsip' => 'boolean',
+    ];
+
     public function isBeregu(): bool
     {
         return strtolower($this->jenis_pendaftaran ?? '') === 'beregu';

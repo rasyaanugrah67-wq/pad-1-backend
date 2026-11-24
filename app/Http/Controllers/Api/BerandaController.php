@@ -148,6 +148,7 @@ class BerandaController extends Controller
             })
             ->whereDate('j.tanggal', $tanggal)
             ->where('l.status', 'Dibuka')
+            ->where('l.is_arsip', false)
             ->orderBy('j.waktu_mulai')
             ->select(
                 'j.id_jadwal',
@@ -189,6 +190,7 @@ class BerandaController extends Controller
                 'j.id_jadwal'
             )
             ->where('p.status', 'Berlangsung')
+            ->where('l.is_arsip', false)
             ->when($periode, function ($query) use ($periode) {
                 $query->where(
                     'l.id_periode',

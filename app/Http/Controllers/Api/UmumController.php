@@ -34,6 +34,7 @@ class UmumController extends Controller
 
         $periode = DB::table('periode')->where('status', 'Aktif')->orderByDesc('tahun')->first();
         $jadwal = JadwalLomba::with(['lomba.kategori'])
+            ->whereHas('lomba', fn ($lomba) => $lomba->where('is_arsip', false))
             ->when($periode, fn ($q) => $q->whereHas('lomba', fn ($lomba) => $lomba->where('id_periode', $periode->id_periode)->where('status', '!=', 'Nonaktif')))
             ->when($validated['tanggal'] ?? null, fn ($q, $tanggal) => $q->whereDate('tanggal', $tanggal))
             ->when($validated['id_lomba'] ?? null, fn ($q, $id) => $q->where('id_lomba', $id))
