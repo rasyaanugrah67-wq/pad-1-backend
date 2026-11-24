@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AlbumDokumentasi;
+use Cloudinary\Cloudinary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use OpenApi\Annotations as OA;
+use Throwable;
 
 class DokumentasiController extends Controller
 {
@@ -182,19 +185,45 @@ class DokumentasiController extends Controller
             }
         }
 
-        $cover = null;
+        $coverUrl = null;
+        $cloudinaryPublicId = null;
+        $cloudinary = null;
 
         if ($request->hasFile('cover')) {
-            $cover = $request->file('cover')->store('dokumentasi/covers', 'public');
+            try {
+                $cloudinary = new Cloudinary();
+                $upload = $cloudinary->uploadApi()->upload(
+                    $request->file('cover')->getRealPath(),
+                    [
+                        'folder' => 'pad/dokumentasi/covers',
+                        'resource_type' => 'image',
+                    ]
+                );
+
+                $coverUrl = $upload['secure_url'] ?? $upload['url'];
+                $cloudinaryPublicId = $upload['public_id'] ?? null;
+            } catch (Throwable $e) {
+                Log::error('Gagal mengunggah cover album ke Cloudinary: ' . $e->getMessage(), [
+                    'exception' => $e
+                ]);
+
+                return $this->error('Gagal mengunggah cover album ke penyimpanan cloud. Silakan coba kembali.', 500);
+            }
         }
 
         try {
             $album = AlbumDokumentasi::create(
-                array_merge($validated, ['cover' => $cover])
+                array_merge($validated, ['cover' => $coverUrl])
             );
-        } catch (\Throwable $e) {
-            if ($cover) {
-                Storage::disk('public')->delete($cover);
+        } catch (Throwable $e) {
+            if ($cloudinary && $cloudinaryPublicId) {
+                try {
+                    $cloudinary->uploadApi()->destroy($cloudinaryPublicId, [
+                        'resource_type' => 'image',
+                    ]);
+                } catch (Throwable $cleanupError) {
+                    report($cleanupError);
+                }
             }
 
             throw $e;
@@ -275,26 +304,52 @@ class DokumentasiController extends Controller
         }
 
         $oldCover = $album->cover;
-        $newCover = null;
+        $newCoverUrl = null;
+        $cloudinaryPublicId = null;
+        $cloudinary = null;
 
         if ($request->hasFile('cover')) {
-            $newCover = $request->file('cover')->store('dokumentasi/covers', 'public');
-            $validated['cover'] = $newCover;
+            try {
+                $cloudinary = new Cloudinary();
+                $upload = $cloudinary->uploadApi()->upload(
+                    $request->file('cover')->getRealPath(),
+                    [
+                        'folder' => 'pad/dokumentasi/covers',
+                        'resource_type' => 'image',
+                    ]
+                );
+
+                $newCoverUrl = $upload['secure_url'] ?? $upload['url'];
+                $cloudinaryPublicId = $upload['public_id'] ?? null;
+                $validated['cover'] = $newCoverUrl;
+            } catch (Throwable $e) {
+                Log::error('Gagal mengunggah cover baru ke Cloudinary: ' . $e->getMessage(), [
+                    'exception' => $e
+                ]);
+
+                return $this->error('Gagal mengunggah cover album ke penyimpanan cloud. Silakan coba kembali.', 500);
+            }
         }
 
         try {
             $album->update($validated);
-        } catch (\Throwable $e) {
-            if ($newCover) {
-                Storage::disk('public')->delete($newCover);
+        } catch (Throwable $e) {
+            if ($cloudinary && $cloudinaryPublicId) {
+                try {
+                    $cloudinary->uploadApi()->destroy($cloudinaryPublicId, [
+                        'resource_type' => 'image',
+                    ]);
+                } catch (Throwable $cleanupError) {
+                    report($cleanupError);
+                }
             }
 
             throw $e;
         }
 
-        // Cover lama hanya dihapus setelah cover baru berhasil disimpan.
-        if ($newCover && $oldCover) {
-            Storage::disk('public')->delete($oldCover);
+        // Cover lama hanya dihapus setelah cover baru dan record database berhasil disimpan.
+        if ($newCoverUrl && $oldCover) {
+            $this->deleteSingleFile($oldCover, 'image');
         }
 
         return $this->ok(
@@ -340,24 +395,32 @@ class DokumentasiController extends Controller
             return $this->error('Album dokumentasi tidak ditemukan.', 404);
         }
 
-        // Simpan path file sebelum record database dihapus.
-        $paths = $album->media
-            ->pluck('file')
-            ->filter()
-            ->push($album->cover)
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        // Ambil daftar file media beserta jenis_file dan cover album sebelum record database dihapus
+        $mediaItems = $album->media->map(fn ($m) => [
+            'file' => $m->file,
+            'jenis_file' => $m->jenis_file,
+        ])->all();
 
-        // Hapus record media dan album dalam satu transaksi.
+        $coverFile = $album->cover;
+
+        // Hapus record media dan album dalam satu transaksi database.
         DB::transaction(function () use ($album) {
             $album->media()->delete();
             $album->delete();
         });
 
-        // Hapus file fisik setelah transaksi database berhasil.
-        Storage::disk('public')->delete($paths);
+        // Hapus seluruh file fisik media setelah transaksi database berhasil
+        foreach ($mediaItems as $item) {
+            if (!empty($item['file'])) {
+                $resourceType = ($item['jenis_file'] === 'Video') ? 'video' : 'image';
+                $this->deleteSingleFile($item['file'], $resourceType);
+            }
+        }
+
+        // Hapus file cover album
+        if ($coverFile) {
+            $this->deleteSingleFile($coverFile, 'image');
+        }
 
         return $this->ok(null, 'Album dan seluruh media dokumentasi berhasil dihapus.');
     }
@@ -430,16 +493,48 @@ class DokumentasiController extends Controller
             return $this->error('Jenis file tidak sesuai dengan jenis media.', 422);
         }
 
-        $path = $file->store('dokumentasi/media', 'public');
+        $resourceType = ($validated['jenis_file'] === 'Video') ? 'video' : 'image';
+        $uploadedUrl = null;
+        $cloudinaryPublicId = null;
+        $cloudinary = null;
+
+        try {
+            $cloudinary = new Cloudinary();
+            $upload = $cloudinary->uploadApi()->upload(
+                $file->getRealPath(),
+                [
+                    'folder' => 'pad/dokumentasi/media',
+                    'resource_type' => $resourceType,
+                ]
+            );
+
+            $uploadedUrl = $upload['secure_url'] ?? $upload['url'];
+            $cloudinaryPublicId = $upload['public_id'] ?? null;
+        } catch (Throwable $e) {
+            Log::error('Gagal mengunggah media ke Cloudinary: ' . $e->getMessage(), [
+                'exception' => $e
+            ]);
+
+            return $this->error('Gagal mengunggah media ke penyimpanan cloud. Silakan coba kembali.', 500);
+        }
 
         try {
             $media = $album->media()->create([
-                'file' => $path,
+                'file' => $uploadedUrl,
                 'jenis_file' => $validated['jenis_file'],
                 'keterangan' => $validated['keterangan'] ?? null,
             ]);
-        } catch (\Throwable $e) {
-            Storage::disk('public')->delete($path);
+        } catch (Throwable $e) {
+            if ($cloudinary && $cloudinaryPublicId) {
+                try {
+                    $cloudinary->uploadApi()->destroy($cloudinaryPublicId, [
+                        'resource_type' => $resourceType,
+                    ]);
+                } catch (Throwable $cleanupError) {
+                    report($cleanupError);
+                }
+            }
+
             throw $e;
         }
 
@@ -496,11 +591,14 @@ class DokumentasiController extends Controller
             return $this->error('Media dokumentasi tidak ditemukan.', 404);
         }
 
-        $path = $media->file;
+        $filePath = $media->file;
+        $resourceType = ($media->jenis_file === 'Video') ? 'video' : 'image';
 
         DB::transaction(fn () => $media->delete());
 
-        Storage::disk('public')->delete($path);
+        if ($filePath) {
+            $this->deleteSingleFile($filePath, $resourceType);
+        }
 
         return $this->ok(null, 'Media dokumentasi berhasil dihapus.');
     }
@@ -575,7 +673,56 @@ class DokumentasiController extends Controller
 
     private function url(?string $path): ?string
     {
-        return $path ? Storage::disk('public')->url($path) : null;
+        if (!$path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return Storage::disk('public')->url($path);
+    }
+
+    /**
+     * Hapus satu file fisik dari Cloudinary (jika URL Cloudinary) atau Storage lokal.
+     */
+    private function deleteSingleFile(string $path, string $resourceType = 'image'): void
+    {
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $publicId = $this->extractCloudinaryPublicId($path);
+            
+            if ($publicId) {
+                try {
+                    $cloudinary = new Cloudinary();
+                    $cloudinary->uploadApi()->destroy($publicId, [
+                        'resource_type' => $resourceType,
+                    ]);
+                } catch (Throwable $e) {
+                    report($e);
+                }
+            }
+        } else {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    /**
+     * Ekstrak public_id dari Cloudinary delivery URL.
+     */
+    private function extractCloudinaryPublicId(string $url): ?string
+    {
+        $parsed = parse_url($url);
+        if (($parsed['host'] ?? '') !== 'res.cloudinary.com') {
+            return null;
+        }
+
+        $path = $parsed['path'] ?? '';
+        if (preg_match('#/(?:image|video|raw)/upload/(?:v\d+/)?(.+?)(?:\.[a-zA-Z0-9]+)?$#', $path, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 
     private function ok($data, string $message, int $status = 200): JsonResponse
