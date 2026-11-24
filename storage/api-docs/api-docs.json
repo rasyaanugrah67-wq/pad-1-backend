@@ -2311,52 +2311,17 @@
                 ]
             }
         },
-        "/api/manajemen/pembayaran/{id_pembayaran}/verifikasi": {
-            "patch": {
+        "/api/warga/iuran/aktif": {
+            "get": {
                 "tags": [
-                    "Manajemen - Iuran"
+                    "Warga - Iuran"
                 ],
-                "summary": "Menerima atau menolak pembayaran iuran",
-                "description": "Verifikasi pembayaran oleh Admin atau Panitia.",
-                "operationId": "verifikasiPembayaranIuran",
-                "parameters": [
-                    {
-                        "name": "id_pembayaran",
-                        "in": "path",
-                        "description": "ID pembayaran yang akan diverifikasi",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "example": 1
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "keputusan"
-                                ],
-                                "properties": {
-                                    "keputusan": {
-                                        "type": "string",
-                                        "enum": [
-                                            "Diterima",
-                                            "Ditolak"
-                                        ],
-                                        "example": "Diterima"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
+                "summary": "Daftar iuran aktif untuk dropdown konfirmasi pembayaran",
+                "description": "Mengembalikan iuran yang is_aktif=true dan status=Belum Bayar milik warga yang login, diurutkan berdasarkan jatuh_tempo.",
+                "operationId": "getIuranAktifWarga",
                 "responses": {
                     "200": {
-                        "description": "Pembayaran berhasil diverifikasi",
+                        "description": "Daftar iuran aktif berhasil diambil",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2369,7 +2334,33 @@
                                             "type": "string"
                                         },
                                         "data": {
-                                            "type": "object"
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id_iuran": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "nama_iuran": {
+                                                        "type": "string",
+                                                        "example": "Iuran RT Agustus 2025"
+                                                    },
+                                                    "nominal": {
+                                                        "type": "number",
+                                                        "example": 50000
+                                                    },
+                                                    "jatuh_tempo": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "example": "2025-08-31"
+                                                    },
+                                                    "nama_kepala_keluarga": {
+                                                        "type": "string",
+                                                        "example": "Budi Santoso"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
                                         }
                                     },
                                     "type": "object"
@@ -2380,11 +2371,8 @@
                     "401": {
                         "description": "Belum login"
                     },
-                    "404": {
-                        "description": "Data pembayaran atau iuran tidak ditemukan"
-                    },
-                    "422": {
-                        "description": "Keputusan tidak valid atau pembayaran sudah diverifikasi"
+                    "403": {
+                        "description": "Akun tidak terhubung dengan warga"
                     }
                 },
                 "security": [
@@ -4683,6 +4671,502 @@
                         "description": "RW masih memiliki RT"
                     }
                 }
+            }
+        },
+        "/api/manajemen/tagihan": {
+            "get": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Melihat daftar tagihan iuran",
+                "description": "Mengambil daftar tagihan iuran.",
+                "operationId": "getDaftarTagihanIuran",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Cari berdasarkan nama tagihan",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Iuran RT"
+                        }
+                    },
+                    {
+                        "name": "is_aktif",
+                        "in": "query",
+                        "description": "Filter status aktif (1 = aktif, 0 = nonaktif)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_periode",
+                        "in": "query",
+                        "description": "Filter berdasarkan periode",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Jumlah data per halaman (1-50)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 50,
+                            "minimum": 1,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar tagihan berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Membuat tagihan iuran baru",
+                "description": "Membuat tagihan iuran baru dan generate baris iuran per warga.",
+                "operationId": "buatTagihanIuran",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nama_tagihan",
+                                    "id_periode",
+                                    "nominal",
+                                    "jatuh_tempo",
+                                    "target"
+                                ],
+                                "properties": {
+                                    "nama_tagihan": {
+                                        "type": "string",
+                                        "example": "Iuran RT Agustus 2025"
+                                    },
+                                    "id_periode": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nominal": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50000
+                                    },
+                                    "jatuh_tempo": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-08-31"
+                                    },
+                                    "keterangan": {
+                                        "type": "string",
+                                        "example": "Iuran bulanan RT",
+                                        "nullable": true
+                                    },
+                                    "target": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Semua",
+                                            "Tertentu"
+                                        ],
+                                        "example": "Semua"
+                                    },
+                                    "id_warga": {
+                                        "description": "Wajib jika target=Tertentu",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tagihan berhasil dibuat",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    },
+                    "422": {
+                        "description": "Data tidak valid"
+                    },
+                    "500": {
+                        "description": "Gagal membuat tagihan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/manajemen/tagihan/{id_tagihan}": {
+            "get": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Detail tagihan iuran + statistik pembayaran",
+                "description": "Mengambil detail tagihan iuran beserta daftar iuran warga.",
+                "operationId": "getDetailTagihanIuran",
+                "parameters": [
+                    {
+                        "name": "id_tagihan",
+                        "in": "path",
+                        "description": "ID tagihan",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail tagihan berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    },
+                    "404": {
+                        "description": "Tagihan tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Mengubah tagihan iuran",
+                "description": "Mengubah tagihan iuran (nama, nominal, jatuh_tempo, keterangan).",
+                "operationId": "updateTagihanIuran",
+                "parameters": [
+                    {
+                        "name": "id_tagihan",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nama_tagihan": {
+                                        "type": "string",
+                                        "example": "Iuran RT September 2025"
+                                    },
+                                    "nominal": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 60000
+                                    },
+                                    "jatuh_tempo": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-09-30"
+                                    },
+                                    "keterangan": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tagihan berhasil diubah",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    },
+                    "404": {
+                        "description": "Tagihan tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Data tidak valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/manajemen/tagihan/{id_tagihan}/nonaktifkan": {
+            "patch": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Menonaktifkan tagihan iuran",
+                "description": "Menonaktifkan tagihan iuran beserta seluruh iuran terkait.",
+                "operationId": "nonaktifkanTagihanIuran",
+                "parameters": [
+                    {
+                        "name": "id_tagihan",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tagihan berhasil dinonaktifkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    },
+                    "404": {
+                        "description": "Tagihan tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Tagihan sudah nonaktif"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/manajemen/tagihan/{id_tagihan}/pembayaran": {
+            "get": {
+                "tags": [
+                    "Manajemen - Iuran"
+                ],
+                "summary": "Status pembayaran warga dari sebuah tagihan",
+                "description": "Mengambil status pembayaran per warga dari sebuah tagihan.",
+                "operationId": "getStatusPembayaranWargaTagihan",
+                "parameters": [
+                    {
+                        "name": "id_tagihan",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter status iuran",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Semua",
+                                "Belum Bayar",
+                                "Sudah Bayar"
+                            ],
+                            "example": "Semua"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 50,
+                            "minimum": 1,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status pembayaran berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Tidak memiliki hak akses"
+                    },
+                    "404": {
+                        "description": "Tagihan tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/jadwal": {

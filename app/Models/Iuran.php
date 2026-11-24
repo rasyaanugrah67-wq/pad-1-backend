@@ -15,17 +15,34 @@ class Iuran extends Model
     protected $primaryKey = 'id_iuran';
 
     protected $fillable = [
+        'id_tagihan',
         'id_warga',
         'id_periode',
+        'nama_iuran',
         'nominal',
         'jatuh_tempo',
+        'keterangan',
         'status',
+        'is_aktif',
     ];
 
     protected $casts = [
         'nominal' => 'decimal:2',
         'jatuh_tempo' => 'date',
+        'is_aktif' => 'boolean',
     ];
+
+    public function getNamaIuranAttribute($value): string
+    {
+        return $value
+            ?: ($this->tagihan?->nama_tagihan
+                ?? ($this->periode ? 'Iuran Periode ' . $this->periode->tahun : 'Iuran Warga'));
+    }
+
+    public function tagihan(): BelongsTo
+    {
+        return $this->belongsTo(TagihanIuran::class, 'id_tagihan', 'id_tagihan');
+    }
 
     public function warga(): BelongsTo
     {

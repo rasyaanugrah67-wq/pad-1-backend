@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\DokumentasiController;
 use App\Http\Controllers\Api\HistoriController;
 use App\Http\Controllers\Api\PengaturanPembayaranController;
 use App\Http\Controllers\Api\UmumController;
+use App\Http\Controllers\Api\TagihanIuranController;
 
 // ==============================
 // AUTHENTICATION
@@ -259,6 +260,12 @@ Route::middleware([
 
     // PB-05: Iuran Pribadi
 
+    // PENTING: Route statis /iuran/aktif harus sebelum /iuran/{id_iuran}
+    Route::get('/iuran/aktif', [
+        IuranController::class,
+        'iuranAktifWarga',
+    ]);
+
     Route::get('/iuran', [
         IuranController::class,
         'index'
@@ -379,6 +386,14 @@ Route::delete('/pertandingan/manage/{id_pertandingan}', [
         IuranController::class,
         'verifikasiPembayaran'
     ])->whereNumber('id_pembayaran');
+
+    // PB-05: Manajemen Tagihan Iuran
+    Route::get('/manajemen/tagihan', [TagihanIuranController::class, 'index']);
+    Route::post('/manajemen/tagihan', [TagihanIuranController::class, 'store']);
+    Route::get('/manajemen/tagihan/{id_tagihan}', [TagihanIuranController::class, 'show'])->whereNumber('id_tagihan');
+    Route::put('/manajemen/tagihan/{id_tagihan}', [TagihanIuranController::class, 'update'])->whereNumber('id_tagihan');
+    Route::patch('/manajemen/tagihan/{id_tagihan}/nonaktifkan', [TagihanIuranController::class, 'nonaktifkan'])->whereNumber('id_tagihan');
+    Route::get('/manajemen/tagihan/{id_tagihan}/pembayaran', [TagihanIuranController::class, 'statusPembayaranWarga'])->whereNumber('id_tagihan');
 
 
 Route::get('/jadwal/manage', [

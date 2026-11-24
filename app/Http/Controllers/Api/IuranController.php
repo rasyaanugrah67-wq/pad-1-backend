@@ -6,11 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Iuran;
 use App\Models\Notifikasi;
 use App\Models\Pembayaran;
+use App\Models\Periode;
+use App\Models\TagihanIuran;
+use App\Models\Warga;
 use Cloudinary\Cloudinary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use OpenApi\Annotations as OA;
 use Throwable;
 
 class IuranController extends Controller
@@ -249,6 +253,13 @@ class IuranController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Iuran ini sudah lunas.',
+            ], 422);
+        }
+
+        if (!$iuran->is_aktif) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tagihan ini tidak aktif dan tidak dapat dibayar.',
             ], 422);
         }
 
@@ -840,6 +851,76 @@ public function daftarIuranManajemen(Request $request): JsonResponse
      * )
      */
     
+    /**
+     * Mengambil daftar iuran aktif milik warga untuk dropdown konfirmasi pembayaran.
+     *
+     * @OA\Get(
+     *     path="/api/warga/iuran/aktif",
+     *     operationId="getIuranAktifWarga",
+     *     tags={"Warga - Iuran"},
+     *     summary="Daftar iuran aktif untuk dropdown konfirmasi pembayaran",
+     *     description="Mengembalikan iuran yang is_aktif=true dan status=Belum Bayar milik warga yang login, diurutkan berdasarkan jatuh_tempo.",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Daftar iuran aktif berhasil diambil",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="id_iuran", type="integer", example=1),
+     *                     @OA\Property(property="nama_iuran", type="string", example="Iuran RT Agustus 2025"),
+     *                     @OA\Property(property="nominal", type="number", example=50000),
+     *                     @OA\Property(property="jatuh_tempo", type="string", format="date", example="2025-08-31"),
+     *                     @OA\Property(property="nama_kepala_keluarga", type="string", example="Budi Santoso")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Akun tidak terhubung dengan warga")
+     * )
+     */
+    public function iuranAktifWarga(Request $request): JsonResponse
+    {
+        $akun    = $request->user();
+        $idWarga = $akun->id_warga;
+
+        if (!$idWarga) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun tidak terhubung dengan data warga.',
+            ], 403);
+        }
+
+        $iuranList = Iuran::with(['warga:id_warga,nama', 'tagihan', 'periode'])
+            ->where('id_warga', $idWarga)
+            ->where('is_aktif', true)
+            ->where('status', 'Belum Bayar')
+            ->orderBy('jatuh_tempo')
+            ->get();
+
+        $data = $iuranList->map(function ($iuran) {
+            return [
+                'id_iuran'             => $iuran->id_iuran,
+                'nama_iuran'           => $iuran->nama_iuran,
+                'nominal'              => $iuran->nominal,
+                'jatuh_tempo'          => $iuran->jatuh_tempo,
+                'nama_kepala_keluarga' => $iuran->warga?->nama,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar iuran aktif berhasil diambil.',
+            'data'    => $data,
+        ]);
+    }
+
     public function verifikasiPembayaran(
         Request $request,
         int $id_pembayaran
