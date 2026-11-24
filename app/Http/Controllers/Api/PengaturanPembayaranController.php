@@ -189,7 +189,7 @@ class PengaturanPembayaranController extends Controller
                     $e->getMessage()
                 );
 
-                Log::error('Gagal mengunggah QRIS ke Cloudinary.', [
+                Log::channel('stderr')->error('Gagal mengunggah QRIS ke Cloudinary.', [
                     'exception_class' => $e::class,
                     'exception_message' => $safeMessage,
                     'exception_code' => $e->getCode(),
