@@ -43,7 +43,9 @@ class RtController extends Controller
      *             required={"id_rw", "nomor_rt"},
      *             @OA\Property(property="id_rw", type="integer", example=1),
      *             @OA\Property(property="nomor_rt", type="string", example="001"),
-     *             @OA\Property(property="nama_rt", type="string", example="RT 001")
+     *             @OA\Property(property="nama_rt", type="string", example="RT 001"),
+     *             @OA\Property(property="nama_ketua", type="string", nullable=true, example="Budi Santoso"),
+     *             @OA\Property(property="nomor_whatsapp", type="string", nullable=true, example="081234567890")
      *         )
      *     ),
      *     @OA\Response(response=201, description="RT berhasil ditambahkan"),
@@ -62,6 +64,8 @@ class RtController extends Controller
                     ->where(fn ($query) => $query->where('id_rw', $request->input('id_rw'))),
             ],
             'nama_rt' => ['nullable', 'string', 'max:100'],
+            'nama_ketua' => ['nullable', 'string', 'max:150'],
+            'nomor_whatsapp' => ['nullable', 'string', 'max:20'],
         ]);
 
         $rt = Rt::create($validated);
@@ -130,6 +134,8 @@ class RtController extends Controller
                     ->ignore($rt->id_rt, 'id_rt'),
             ],
             'nama_rt' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'nama_ketua' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'nomor_whatsapp' => ['sometimes', 'nullable', 'string', 'max:20'],
         ]);
 
         $rt->update($validated);

@@ -17,6 +17,8 @@ class Rt extends Model
         'id_rw',
         'nomor_rt',
         'nama_rt',
+        'nama_ketua',
+        'nomor_whatsapp',
     ];
 
     public function rw()

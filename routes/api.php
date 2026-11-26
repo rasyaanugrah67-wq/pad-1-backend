@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\HistoriController;
 use App\Http\Controllers\Api\PengaturanPembayaranController;
 use App\Http\Controllers\Api\UmumController;
 use App\Http\Controllers\Api\TagihanIuranController;
+use App\Http\Controllers\Api\KontakPengurusController;
+use App\Http\Controllers\Api\PesanController;
 
 // ==============================
 // AUTHENTICATION
@@ -91,7 +93,6 @@ Route::middleware([
         DashboardController::class,
         'admin'
     ]);
-
 
     // AD-01: Data Warga dan Struktur RT/RW
 
@@ -233,6 +234,8 @@ Route::middleware([
         DashboardController::class,
         'warga'
     ]);
+
+    Route::get('/kontak-pengurus', [KontakPengurusController::class, 'show']);
 
 
     // PB-04: Pendaftaran
@@ -376,6 +379,13 @@ Route::delete('/pertandingan/manage/{id_pertandingan}', [
 ]);
 
     // PB-05: Manajemen Iuran
+
+    Route::get('/manajemen/pesan', [PesanController::class, 'index']);
+    Route::get('/manajemen/pesan/{id}', [PesanController::class, 'show'])->whereNumber('id');
+    Route::post('/manajemen/pesan', [PesanController::class, 'store']);
+    Route::put('/manajemen/pesan/{id}', [PesanController::class, 'update'])->whereNumber('id');
+    Route::delete('/manajemen/pesan/{id}', [PesanController::class, 'destroy'])->whereNumber('id');
+    Route::patch('/manajemen/pesan/{id}/kirim', [PesanController::class, 'kirim'])->whereNumber('id');
 
     Route::get('/manajemen/iuran', [
         IuranController::class,

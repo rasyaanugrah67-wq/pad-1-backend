@@ -2382,6 +2382,31 @@
                 ]
             }
         },
+        "/api/warga/kontak-pengurus": {
+            "get": {
+                "tags": [
+                    "Warga - Profil"
+                ],
+                "summary": "Mengambil kontak Ketua RT dan RW warga yang login",
+                "operationId": "dacc07d8e7783ae11a1f81a6c9321f3f",
+                "responses": {
+                    "200": {
+                        "description": "Kontak pengurus berhasil ditampilkan"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "404": {
+                        "description": "Kontak pengurus belum tersedia"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/lomba": {
             "get": {
                 "tags": [
@@ -4188,6 +4213,154 @@
                 ]
             }
         },
+        "/api/manajemen/pesan": {
+            "get": {
+                "tags": [
+                    "Manajemen Pesan"
+                ],
+                "summary": "Daftar pesan",
+                "operationId": "8e2b1d7983fca7976070cf0df38ab161",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Manajemen Pesan"
+                ],
+                "summary": "Membuat pesan",
+                "operationId": "900755e0938feb5af90705f782cfe296",
+                "responses": {
+                    "201": {
+                        "description": "Berhasil"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/manajemen/pesan/{id}": {
+            "get": {
+                "tags": [
+                    "Manajemen Pesan"
+                ],
+                "summary": "Detail pesan",
+                "operationId": "9ca6f4eb7fcf0a8053e2fd80506bceba",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Manajemen Pesan"
+                ],
+                "summary": "Mengedit draft",
+                "operationId": "6daf9bc60347fd05f6dc16348721127b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Manajemen Pesan"
+                ],
+                "summary": "Menghapus draft",
+                "operationId": "f9c0e682937dc7d41b55b99cb29787eb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/manajemen/pesan/{id}/kirim": {
+            "patch": {
+                "tags": [
+                    "Manajemen Pesan"
+                ],
+                "summary": "Mengirim pesan",
+                "operationId": "65b660dd12f5124a60c13be02ec2dfbf",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/akun/profil": {
             "put": {
                 "tags": [
@@ -4406,6 +4579,16 @@
                                     "nama_rt": {
                                         "type": "string",
                                         "example": "RT 001"
+                                    },
+                                    "nama_ketua": {
+                                        "type": "string",
+                                        "example": "Budi Santoso",
+                                        "nullable": true
+                                    },
+                                    "nomor_whatsapp": {
+                                        "type": "string",
+                                        "example": "081234567890",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -4559,6 +4742,16 @@
                                     "nama_rw": {
                                         "type": "string",
                                         "example": "RW 001"
+                                    },
+                                    "nama_ketua": {
+                                        "type": "string",
+                                        "example": "Siti Aminah",
+                                        "nullable": true
+                                    },
+                                    "nomor_whatsapp": {
+                                        "type": "string",
+                                        "example": "081234567890",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -5612,6 +5805,10 @@
             "description": "Manajemen - Iuran"
         },
         {
+            "name": "Warga - Profil",
+            "description": "Warga - Profil"
+        },
+        {
             "name": "Manajemen Lomba",
             "description": "Manajemen Lomba"
         },
@@ -5634,6 +5831,10 @@
         {
             "name": "Pengaturan Pembayaran",
             "description": "Pengaturan Pembayaran"
+        },
+        {
+            "name": "Manajemen Pesan",
+            "description": "Manajemen Pesan"
         },
         {
             "name": "Akun - Profil",

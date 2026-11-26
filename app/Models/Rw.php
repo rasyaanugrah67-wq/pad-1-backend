@@ -16,6 +16,8 @@ class Rw extends Model
     protected $fillable = [
         'nomor_rw',
         'nama_rw',
+        'nama_ketua',
+        'nomor_whatsapp',
     ];
 
     public function rt()

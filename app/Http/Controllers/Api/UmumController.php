@@ -75,7 +75,7 @@ class UmumController extends Controller
 
         $data = DB::table('pengumuman as p')
             ->join('periode as pe', 'p.id_periode', '=', 'pe.id_periode')
-            ->where('p.status', 'Dipublikasi')->whereNotNull('p.tanggal_publikasi')->where('p.tanggal_publikasi', '<=', now())
+            ->where('p.status', 'Dipublikasi')->where('p.target_penerima', 'Semua')->whereNotNull('p.tanggal_publikasi')->where('p.tanggal_publikasi', '<=', now())
             ->when($validated['search'] ?? null, fn ($q, $search) => $q->where(fn ($nested) => $nested->where('p.judul', 'like', "%{$search}%")->orWhere('p.isi', 'like', "%{$search}%")))
             ->select('p.id_pengumuman', 'p.id_periode', 'pe.tahun', 'p.judul', 'p.isi', 'p.tanggal_publikasi')
             ->orderByDesc('p.tanggal_publikasi')->paginate($validated['per_page'] ?? 10);

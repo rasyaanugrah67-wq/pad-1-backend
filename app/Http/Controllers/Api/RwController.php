@@ -42,7 +42,9 @@ class RwController extends Controller
      *         @OA\JsonContent(
      *             required={"nomor_rw"},
      *             @OA\Property(property="nomor_rw", type="string", example="001"),
-     *             @OA\Property(property="nama_rw", type="string", example="RW 001")
+     *             @OA\Property(property="nama_rw", type="string", example="RW 001"),
+     *             @OA\Property(property="nama_ketua", type="string", nullable=true, example="Siti Aminah"),
+     *             @OA\Property(property="nomor_whatsapp", type="string", nullable=true, example="081234567890")
      *         )
      *     ),
      *     @OA\Response(response=201, description="RW berhasil ditambahkan"),
@@ -59,6 +61,8 @@ class RwController extends Controller
                 'unique:rw,nomor_rw',
             ],
             'nama_rw' => ['nullable', 'string', 'max:100'],
+            'nama_ketua' => ['nullable', 'string', 'max:150'],
+            'nomor_whatsapp' => ['nullable', 'string', 'max:20'],
         ]);
 
         $rw = Rw::create($validated);
@@ -120,6 +124,8 @@ class RwController extends Controller
                 Rule::unique('rw', 'nomor_rw')->ignore($rw->id_rw, 'id_rw'),
             ],
             'nama_rw' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'nama_ketua' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'nomor_whatsapp' => ['sometimes', 'nullable', 'string', 'max:20'],
         ]);
 
         $rw->update($validated);

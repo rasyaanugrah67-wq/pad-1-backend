@@ -15,6 +15,7 @@ class Notifikasi extends Model
 
     protected $fillable = [
         'id_warga',
+        'id_pengumuman',
         'judul',
         'pesan',
         'tipe',
@@ -28,6 +29,11 @@ class Notifikasi extends Model
     public function warga(): BelongsTo
     {
         return $this->belongsTo(Warga::class, 'id_warga', 'id_warga');
+    }
+
+    public function pengumuman(): BelongsTo
+    {
+        return $this->belongsTo(Pengumuman::class, 'id_pengumuman', 'id_pengumuman');
     }
 }
 
