@@ -9,16 +9,22 @@ use App\Models\Pembayaran;
 use App\Models\Periode;
 use App\Models\TagihanIuran;
 use App\Models\Warga;
+use App\Services\PaymentConfirmationWhatsAppService;
 use Cloudinary\Cloudinary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use OpenApi\Annotations as OA;
 use Throwable;
 
 class IuranController extends Controller
 {
+    public function __construct(
+        private readonly PaymentConfirmationWhatsAppService $paymentConfirmationWhatsApp
+    ) {
+    }
     /**
      * Mengambil daftar iuran milik warga yang login.
      *
@@ -944,7 +950,7 @@ public function daftarIuranManajemen(Request $request): JsonResponse
 
         $idAkun = $akun->id_akun;
 
-        return DB::transaction(function () use (
+        $txResult = DB::transaction(function () use (
             $id_pembayaran,
             $keputusan,
             $idAkun
@@ -1022,21 +1028,45 @@ public function daftarIuranManajemen(Request $request): JsonResponse
                 'status_baca' => false,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => $keputusan === 'Diterima'
-                    ? 'Pembayaran berhasil diterima.'
-                    : 'Pembayaran berhasil ditolak.',
-                'data' => [
-                    'id_pembayaran' => $pembayaran->id_pembayaran,
-                    'id_iuran' => $iuran->id_iuran,
-                    'status_verifikasi' => $pembayaran->status_verifikasi,
-                    'status_iuran' => $iuran->status,
-                    'diverifikasi_oleh' => $idAkun,
-                    'tanggal_verifikasi' => $pembayaran->tanggal_verifikasi,
-                ],
-            ]);
+            return [
+                'pembayaran' => $pembayaran,
+                'iuran' => $iuran,
+            ];
         });
+
+        if ($txResult instanceof JsonResponse) {
+            return $txResult;
+        }
+
+        $pembayaran = $txResult['pembayaran'];
+        $iuran = $txResult['iuran'];
+
+        // Kirim WhatsApp konfirmasi hanya setelah transaksi DB berhasil commit dan keputusan Diterima.
+        if ($keputusan === 'Diterima') {
+            try {
+                $this->paymentConfirmationWhatsApp->sendForApprovedPayment($pembayaran);
+            } catch (Throwable $exception) {
+                Log::error('Unexpected error while triggering payment confirmation WhatsApp.', [
+                    'id_pembayaran' => $pembayaran->id_pembayaran,
+                    'exception' => $exception::class,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $keputusan === 'Diterima'
+                ? 'Pembayaran berhasil diterima.'
+                : 'Pembayaran berhasil ditolak.',
+            'data' => [
+                'id_pembayaran' => $pembayaran->id_pembayaran,
+                'id_iuran' => $iuran->id_iuran,
+                'status_verifikasi' => $pembayaran->status_verifikasi,
+                'status_iuran' => $iuran->status,
+                'diverifikasi_oleh' => $idAkun,
+                'tanggal_verifikasi' => $pembayaran->tanggal_verifikasi,
+            ],
+        ]);
     }
 
 

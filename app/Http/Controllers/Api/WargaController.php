@@ -6,15 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Models\Akun;
 use App\Models\Role;
 use App\Models\Warga;
+use App\Services\AccountCreatedWhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class WargaController extends Controller
 {
+    public function __construct(
+        private readonly AccountCreatedWhatsAppService $accountCreatedWhatsApp
+    ) {
+    }
     /**
      * @OA\Get(
      *     path="/api/admin/warga",
@@ -101,8 +108,8 @@ class WargaController extends Controller
 
         $statusWarga = $validated['status'] ?? 'Aktif';
 
-        // Password awal yang digunakan untuk seluruh akun warga.
-        $passwordAwal = 'WargaDemo2026!';
+        // Password awal yang digunakan untuk akun warga baru (disimpan dalam bentuk hash).
+        $passwordAwal = AccountCreatedWhatsAppService::DEFAULT_INITIAL_PASSWORD;
 
         $result = DB::transaction(function () use ($validated, $statusWarga, $passwordAwal) {
 
@@ -111,17 +118,18 @@ class WargaController extends Controller
                 'status' => $statusWarga,
             ]));
 
-            // 2. Membuat username dari nama warga.
-            $usernameDasar = Str::slug($warga->nama, '.');
+            // 2. Membuat username dari nama warga: gabungkan kata, hilangkan spasi & titik,
+            //    pertahankan kapitalisasi asli.
+            $usernameDasar = preg_replace('/[^A-Za-z0-9]/', '', (string) $warga->nama) ?? '';
 
-            if (empty($usernameDasar)) {
-                $usernameDasar = 'warga';
+            if ($usernameDasar === '') {
+                $usernameDasar = 'Warga';
             }
 
             $username = $usernameDasar;
-            $nomor = 1;
+            $nomor = 2;
 
-            // 3. Memastikan username tidak digunakan akun lain.
+            // 3. Memastikan username tidak digunakan akun lain tanpa mengubah akun lama.
             while (Akun::where('username', $username)->exists()) {
                 $username = $usernameDasar . $nomor;
                 $nomor++;
@@ -148,6 +156,19 @@ class WargaController extends Controller
             ];
         });
 
+        // Kirim informasi akun via WhatsApp hanya setelah transaksi DB berhasil.
+        // Password teks biasa hanya digunakan sementara untuk pengiriman WhatsApp dan tidak disimpan di log.
+        if (!empty($result['warga']->no_hp)) {
+            try {
+                $this->accountCreatedWhatsApp->sendForNewAccount($result['akun'], $passwordAwal);
+            } catch (Throwable $exception) {
+                Log::error('Unexpected error while dispatching WhatsApp account notification.', [
+                    'id_warga' => $result['warga']->id_warga,
+                    'exception' => $exception::class,
+                ]);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Data warga dan akun berhasil ditambahkan.',
@@ -156,7 +177,6 @@ class WargaController extends Controller
                 'akun' => [
                     'id_akun' => $result['akun']->id_akun,
                     'username' => $result['akun']->username,
-                    'password_awal' => $passwordAwal,
                     'role' => 'Warga',
                     'status' => $result['akun']->status,
                 ],

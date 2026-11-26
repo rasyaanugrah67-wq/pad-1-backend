@@ -25,6 +25,8 @@ use App\Http\Controllers\Api\UmumController;
 use App\Http\Controllers\Api\TagihanIuranController;
 use App\Http\Controllers\Api\KontakPengurusController;
 use App\Http\Controllers\Api\PesanController;
+use App\Http\Controllers\Api\SchedulerWebhookController;
+use App\Http\Controllers\Api\WhatsappTemplateController;
 
 // ==============================
 // AUTHENTICATION
@@ -152,6 +154,13 @@ Route::middleware([
         PendaftaranManagementController::class,
         'kuota'
     ])->whereNumber('id');
+
+    // Pengaturan Template WhatsApp (Khusus Admin)
+    Route::get('/whatsapp-templates', [WhatsappTemplateController::class, 'index']);
+    Route::get('/whatsapp-templates/{key}', [WhatsappTemplateController::class, 'show']);
+    Route::put('/whatsapp-templates/{key}', [WhatsappTemplateController::class, 'update']);
+    Route::patch('/whatsapp-templates/{key}/status', [WhatsappTemplateController::class, 'updateStatus']);
+    Route::post('/whatsapp-templates/{key}/preview', [WhatsappTemplateController::class, 'preview']);
 
 });
 
@@ -497,3 +506,7 @@ Route::middleware(['auth:sanctum', 'role:Admin,Panitia'])->group(function () {
     Route::put('/pemenang/{id_pemenang}', [HistoriController::class, 'updateWinner'])->whereNumber('id_pemenang');
     Route::delete('/pemenang/{id_pemenang}', [HistoriController::class, 'destroyWinner'])->whereNumber('id_pemenang');
 });
+
+// Internal HTTP Cron Webhook untuk menjalankan Laravel Scheduler (diproteksi X-Scheduler-Token).
+Route::post('/internal/scheduler/run', [SchedulerWebhookController::class, 'run'])
+    ->middleware('throttle:12,1');

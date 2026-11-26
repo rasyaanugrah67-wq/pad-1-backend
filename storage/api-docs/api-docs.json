@@ -6132,6 +6132,547 @@
                     }
                 }
             }
+        },
+        "/api/admin/whatsapp-templates": {
+            "get": {
+                "tags": [
+                    "Manajemen - WhatsApp"
+                ],
+                "summary": "Melihat seluruh template notifikasi WhatsApp",
+                "description": "Mengambil 5 template notifikasi WhatsApp resmi PAD (account_created, iuran_reminder, payment_confirmed, lomba_reminder, match_invitation) beserta daftar placeholder yang diperbolehkan, contoh data, dan preview hasil render. Hanya dapat diakses oleh Admin.",
+                "operationId": "getDaftarWhatsappTemplates",
+                "responses": {
+                    "200": {
+                        "description": "Daftar template WhatsApp berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar template WhatsApp berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "key": {
+                                                        "type": "string",
+                                                        "example": "account_created"
+                                                    },
+                                                    "title": {
+                                                        "type": "string",
+                                                        "example": "Informasi Akun Warga Baru"
+                                                    },
+                                                    "body": {
+                                                        "type": "string",
+                                                        "example": "Halo Bapak/Ibu {nama}, akun Anda ({username}) telah dibuat."
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "example": "Dikirim otomatis setelah Admin menambahkan data warga dan akun login baru."
+                                                    },
+                                                    "is_active": {
+                                                        "type": "boolean",
+                                                        "example": true
+                                                    },
+                                                    "allowed_placeholders": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string"
+                                                        },
+                                                        "example": [
+                                                            "{nama}",
+                                                            "{username}",
+                                                            "{password_awal}"
+                                                        ]
+                                                    },
+                                                    "sample_data": {
+                                                        "type": "object"
+                                                    },
+                                                    "preview": {
+                                                        "type": "string"
+                                                    },
+                                                    "updated_by": {
+                                                        "type": "string",
+                                                        "example": "admin",
+                                                        "nullable": true
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login (Unauthenticated)"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/whatsapp-templates/{key}": {
+            "get": {
+                "tags": [
+                    "Manajemen - WhatsApp"
+                ],
+                "summary": "Melihat detail template notifikasi WhatsApp",
+                "description": "Mengambil detail satu template berdasarkan key beserta daftar placeholder yang diperbolehkan: account_created ({nama}, {username}, {password_awal}); iuran_reminder ({nama}, {nama_iuran}, {nominal}, {tanggal}, {keterangan}); payment_confirmed ({nama}, {nama_iuran}, {nominal}, {tanggal}, {waktu}); lomba_reminder ({nama}, {nama_lomba}, {tanggal}, {waktu}, {lokasi}, {keterangan}); match_invitation ({nama}, {nama_lomba}, {babak}, {pertandingan}, {tanggal}, {waktu}, {lokasi}, {wilayah}, {pembuka}). Hanya dapat diakses oleh Admin.",
+                "operationId": "getDetailWhatsappTemplate",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Kunci unik template WhatsApp",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "account_created",
+                                "iuran_reminder",
+                                "payment_confirmed",
+                                "lomba_reminder",
+                                "match_invitation"
+                            ],
+                            "example": "iuran_reminder"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail template WhatsApp berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail template WhatsApp berhasil diambil."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "key": {
+                                                    "type": "string",
+                                                    "example": "iuran_reminder"
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "example": "Pengingat Iuran Belum Lunas"
+                                                },
+                                                "body": {
+                                                    "type": "string",
+                                                    "example": "Halo Bapak/Ibu {nama}, tagihan {nama_iuran} Rp{nominal} jatuh tempo {tanggal}. {keterangan}"
+                                                },
+                                                "description": {
+                                                    "type": "string"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "allowed_placeholders": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "{nama}",
+                                                        "{nama_iuran}",
+                                                        "{nominal}",
+                                                        "{tanggal}",
+                                                        "{keterangan}"
+                                                    ]
+                                                },
+                                                "sample_data": {
+                                                    "type": "object"
+                                                },
+                                                "preview": {
+                                                    "type": "string"
+                                                },
+                                                "updated_by": {
+                                                    "type": "string",
+                                                    "example": "admin",
+                                                    "nullable": true
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login (Unauthenticated)"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Template WhatsApp tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Manajemen - WhatsApp"
+                ],
+                "summary": "Mengedit template notifikasi WhatsApp",
+                "description": "Memperbarui judul, isi pesan, dan opsional status aktif template WhatsApp. Placeholder divalidasi ketat sesuai key template: account_created ({nama}, {username}, {password_awal}); iuran_reminder ({nama}, {nama_iuran}, {nominal}, {tanggal}, {keterangan}); payment_confirmed ({nama}, {nama_iuran}, {nominal}, {tanggal}, {waktu}); lomba_reminder ({nama}, {nama_lomba}, {tanggal}, {waktu}, {lokasi}, {keterangan}); match_invitation ({nama}, {nama_lomba}, {babak}, {pertandingan}, {tanggal}, {waktu}, {lokasi}, {wilayah}, {pembuka}). Placeholder di luar daftar akan ditolak dengan 422.",
+                "operationId": "updateWhatsappTemplate",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Kunci unik template WhatsApp",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "account_created",
+                                "iuran_reminder",
+                                "payment_confirmed",
+                                "lomba_reminder",
+                                "match_invitation"
+                            ],
+                            "example": "iuran_reminder"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "body"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Pengingat Iuran Belum Lunas"
+                                    },
+                                    "body": {
+                                        "type": "string",
+                                        "maxLength": 2000,
+                                        "example": "Halo Bapak/Ibu {nama},\\n\\nTagihan {nama_iuran} sebesar Rp{nominal} jatuh tempo pada {tanggal}.\\nKeterangan: {keterangan}"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Template WhatsApp berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Template WhatsApp berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login (Unauthenticated)"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Template WhatsApp tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal (termasuk placeholder tidak diperbolehkan)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/whatsapp-templates/{key}/status": {
+            "patch": {
+                "tags": [
+                    "Manajemen - WhatsApp"
+                ],
+                "summary": "Mengaktifkan atau menonaktifkan template WhatsApp",
+                "description": "Mengubah status aktif template. Ketika is_active bernilai false, pengiriman otomatis WhatsApp untuk trigger terkait akan dihentikan sementara tanpa mengganggu transaksi utama.",
+                "operationId": "updateStatusWhatsappTemplate",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Kunci unik template WhatsApp",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "account_created",
+                                "iuran_reminder",
+                                "payment_confirmed",
+                                "lomba_reminder",
+                                "match_invitation"
+                            ],
+                            "example": "account_created"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "is_active"
+                                ],
+                                "properties": {
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status template WhatsApp berhasil diperbarui",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Template WhatsApp berhasil dinonaktifkan."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login (Unauthenticated)"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Template WhatsApp tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal (is_active wajib boolean)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/whatsapp-templates/{key}/preview": {
+            "post": {
+                "tags": [
+                    "Manajemen - WhatsApp"
+                ],
+                "summary": "Melihat preview template WhatsApp dengan contoh data",
+                "description": "Merender pratinjau pesan menggunakan contoh data realistis tanpa mengirim WhatsApp sungguhan. Admin dapat mengirim draft title/body opsional untuk melihat hasil render sebelum disimpan. Placeholder yang tidak diizinkan untuk key terkait akan ditolak dengan 422.",
+                "operationId": "previewWhatsappTemplate",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Kunci unik template WhatsApp",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "account_created",
+                                "iuran_reminder",
+                                "payment_confirmed",
+                                "lomba_reminder",
+                                "match_invitation"
+                            ],
+                            "example": "lomba_reminder"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Pengingat Peserta Lomba",
+                                        "nullable": true
+                                    },
+                                    "body": {
+                                        "type": "string",
+                                        "maxLength": 2000,
+                                        "example": "Halo {nama}, jangan lupa lomba {nama_lomba} pada {tanggal} pukul {waktu} di {lokasi}.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Preview template WhatsApp berhasil dibuat",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Preview template WhatsApp berhasil dibuat."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "key": {
+                                                    "type": "string",
+                                                    "example": "lomba_reminder"
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "example": "Pengingat Peserta Lomba"
+                                                },
+                                                "is_active": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "allowed_placeholders": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "{nama}",
+                                                        "{nama_lomba}",
+                                                        "{tanggal}",
+                                                        "{waktu}",
+                                                        "{lokasi}",
+                                                        "{keterangan}"
+                                                    ]
+                                                },
+                                                "sample_data": {
+                                                    "type": "object"
+                                                },
+                                                "rendered_message": {
+                                                    "type": "string",
+                                                    "example": "Halo Andi Pratama, jangan lupa lomba Tarik Tambang pada 17-08-2026 pukul 09:00 - 11:00 WIB di Lapangan RW 01."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login (Unauthenticated)"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Template WhatsApp tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal (placeholder tidak valid)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -6236,6 +6777,10 @@
         {
             "name": "Admin - Data Warga",
             "description": "Admin - Data Warga"
+        },
+        {
+            "name": "Manajemen - WhatsApp",
+            "description": "Manajemen - WhatsApp"
         }
     ]
 }
