@@ -2474,6 +2474,479 @@
                 ]
             }
         },
+        "/api/logo-hut-ri/aktif": {
+            "get": {
+                "tags": [
+                    "Role Umum"
+                ],
+                "summary": "Melihat logo HUT RI yang sedang aktif (Publik)",
+                "description": "Mengambil satu logo HUT RI yang berstatus Aktif untuk ditampilkan pada navbar website. Dapat diakses publik tanpa login.",
+                "operationId": "getLogoHutRiAktif",
+                "responses": {
+                    "200": {
+                        "description": "Logo HUT RI aktif berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Logo HUT RI aktif berhasil diambil."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id_logo": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "tahun": {
+                                                    "type": "integer",
+                                                    "example": 2026
+                                                },
+                                                "nama_logo": {
+                                                    "type": "string",
+                                                    "example": "Logo HUT RI ke-81"
+                                                },
+                                                "gambar": {
+                                                    "type": "string",
+                                                    "example": "https://res.cloudinary.com/.../pad/logo-hut-ri/logo-2026.png"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "Aktif"
+                                                }
+                                            },
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/logo-hut-ri": {
+            "get": {
+                "tags": [
+                    "Admin - Logo HUT RI"
+                ],
+                "summary": "Menampilkan daftar logo HUT RI",
+                "description": "Mengambil seluruh data logo HUT RI per tahun, diurutkan dari tahun terbaru. Hanya dapat diakses oleh Admin.",
+                "operationId": "getDaftarLogoHutRi",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Cari berdasarkan nama logo atau tahun",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "81"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter berdasarkan status logo",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Aktif",
+                                "Nonaktif"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daftar logo HUT RI berhasil diambil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar logo HUT RI berhasil diambil."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Logo HUT RI"
+                ],
+                "summary": "Menambahkan logo HUT RI baru",
+                "description": "Admin menambahkan logo HUT RI untuk tahun tertentu dengan mengunggah file gambar ke Cloudinary folder pad/logo-hut-ri. Jika status diset Aktif, logo aktif sebelumnya otomatis menjadi Nonaktif tanpa dihapus.",
+                "operationId": "storeLogoHutRi",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "tahun",
+                                    "nama_logo",
+                                    "gambar"
+                                ],
+                                "properties": {
+                                    "tahun": {
+                                        "type": "integer",
+                                        "example": 2026
+                                    },
+                                    "nama_logo": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Logo HUT RI ke-81"
+                                    },
+                                    "gambar": {
+                                        "description": "File gambar logo (JPEG, JPG, PNG, WebP), maks 5 MB",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Aktif",
+                                            "Nonaktif"
+                                        ],
+                                        "example": "Nonaktif"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Logo HUT RI berhasil ditambahkan"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "422": {
+                        "description": "Validasi gagal (termasuk tahun duplikat)"
+                    },
+                    "500": {
+                        "description": "Gagal mengunggah gambar ke Cloudinary"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/logo-hut-ri/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Logo HUT RI"
+                ],
+                "summary": "Menampilkan detail logo HUT RI",
+                "description": "Menampilkan detail satu logo HUT RI.",
+                "operationId": "showLogoHutRi",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Detail logo HUT RI berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Logo HUT RI tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin - Logo HUT RI"
+                ],
+                "summary": "Mengubah data atau gambar logo HUT RI (PUT)",
+                "description": "Admin dapat mengubah tahun, nama_logo, status, maupun gambar logo. Jika mengunggah file multipart/form-data dari browser/Swagger, disarankan menggunakan POST /api/admin/logo-hut-ri/{id} atau method spoofing _method=PUT.",
+                "operationId": "updateLogoHutRi",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "tahun": {
+                                        "type": "integer",
+                                        "example": 2027
+                                    },
+                                    "nama_logo": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Logo HUT RI ke-82"
+                                    },
+                                    "gambar": {
+                                        "description": "File gambar baru (opsional, maks 5 MB)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Aktif",
+                                            "Nonaktif"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Logo HUT RI berhasil diperbarui"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Logo HUT RI tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    },
+                    "500": {
+                        "description": "Gagal mengunggah gambar ke Cloudinary"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin - Logo HUT RI"
+                ],
+                "summary": "Mengubah data dan upload gambar logo HUT RI (POST multipart/form-data)",
+                "description": "Alternatif POST multipart/form-data untuk memperbarui data dan mengunggah file gambar logo agar kompatibel dengan parsing file PHP.",
+                "operationId": "updateLogoHutRiPost",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "tahun": {
+                                        "type": "integer",
+                                        "example": 2027
+                                    },
+                                    "nama_logo": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Logo HUT RI ke-82"
+                                    },
+                                    "gambar": {
+                                        "description": "File gambar baru (opsional, maks 5 MB)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Aktif",
+                                            "Nonaktif"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Logo HUT RI berhasil diperbarui"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Logo HUT RI tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    },
+                    "500": {
+                        "description": "Gagal mengunggah gambar ke Cloudinary"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Logo HUT RI"
+                ],
+                "summary": "Menghapus logo HUT RI",
+                "description": "Menghapus logo HUT RI.",
+                "operationId": "destroyLogoHutRi",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logo HUT RI berhasil dihapus"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Logo HUT RI tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/logo-hut-ri/{id}/aktif": {
+            "patch": {
+                "tags": [
+                    "Admin - Logo HUT RI"
+                ],
+                "summary": "Mengaktifkan logo HUT RI",
+                "description": "Mengubah status logo terpilih menjadi Aktif dan otomatis menonaktifkan logo aktif sebelumnya tanpa menghapus data logo tahun sebelumnya.",
+                "operationId": "activateLogoHutRi",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logo HUT RI berhasil diaktifkan"
+                    },
+                    "401": {
+                        "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "Logo HUT RI tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/lomba": {
             "get": {
                 "tags": [
@@ -6729,6 +7202,10 @@
         {
             "name": "Warga - Profil",
             "description": "Warga - Profil"
+        },
+        {
+            "name": "Admin - Logo HUT RI",
+            "description": "Admin - Logo HUT RI"
         },
         {
             "name": "Manajemen Lomba",

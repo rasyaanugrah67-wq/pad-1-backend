@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\PengaturanPembayaranController;
 use App\Http\Controllers\Api\UmumController;
 use App\Http\Controllers\Api\TagihanIuranController;
 use App\Http\Controllers\Api\KontakPengurusController;
+use App\Http\Controllers\Api\LogoHutRiController;
 use App\Http\Controllers\Api\PesanController;
 use App\Http\Controllers\Api\SchedulerWebhookController;
 use App\Http\Controllers\Api\WhatsappTemplateController;
@@ -161,6 +162,15 @@ Route::middleware([
     Route::put('/whatsapp-templates/{key}', [WhatsappTemplateController::class, 'update']);
     Route::patch('/whatsapp-templates/{key}/status', [WhatsappTemplateController::class, 'updateStatus']);
     Route::post('/whatsapp-templates/{key}/preview', [WhatsappTemplateController::class, 'preview']);
+
+    // Manajemen Logo HUT RI per Tahun (Khusus Admin)
+    Route::get('/logo-hut-ri', [LogoHutRiController::class, 'index']);
+    Route::post('/logo-hut-ri', [LogoHutRiController::class, 'store']);
+    Route::get('/logo-hut-ri/{id}', [LogoHutRiController::class, 'show'])->whereNumber('id');
+    Route::put('/logo-hut-ri/{id}', [LogoHutRiController::class, 'update'])->whereNumber('id');
+    Route::post('/logo-hut-ri/{id}', [LogoHutRiController::class, 'update'])->whereNumber('id');
+    Route::delete('/logo-hut-ri/{id}', [LogoHutRiController::class, 'destroy'])->whereNumber('id');
+    Route::patch('/logo-hut-ri/{id}/aktif', [LogoHutRiController::class, 'activate'])->whereNumber('id');
 
 });
 
@@ -469,6 +479,7 @@ Route::get('/lomba', [LombaController::class, 'index']);
 Route::get('/lomba/{id}', [LombaController::class, 'show'])->whereNumber('id');
 Route::get('/jadwal', [UmumController::class, 'jadwal']);
 Route::get('/pengumuman', [UmumController::class, 'pengumuman']);
+Route::get('/logo-hut-ri/aktif', [LogoHutRiController::class, 'active']);
 
 // PT-04: Dokumentasi. Semua role dapat membaca; Admin dan Panitia dapat mengelola.
 Route::middleware(['auth:sanctum', 'role:Admin,Panitia,Warga'])->group(function () {
