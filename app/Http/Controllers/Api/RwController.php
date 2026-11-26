@@ -15,7 +15,10 @@ class RwController extends Controller
      *     path="/api/admin/rw",
      *     tags={"Admin - Data RW"},
      *     summary="Menampilkan daftar RW",
-     *     @OA\Response(response=200, description="Daftar RW berhasil ditampilkan")
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Daftar RW berhasil ditampilkan"),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin)")
      * )
      */
     public function index(): JsonResponse
@@ -37,17 +40,20 @@ class RwController extends Controller
      *     path="/api/admin/rw",
      *     tags={"Admin - Data RW"},
      *     summary="Menambahkan data RW",
+     *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
      *             required={"nomor_rw"},
-     *             @OA\Property(property="nomor_rw", type="string", example="001"),
-     *             @OA\Property(property="nama_rw", type="string", example="RW 001"),
-     *             @OA\Property(property="nama_ketua", type="string", nullable=true, example="Siti Aminah"),
-     *             @OA\Property(property="nomor_whatsapp", type="string", nullable=true, example="081234567890")
+     *             @OA\Property(property="nomor_rw", type="string", maxLength=10, example="001"),
+     *             @OA\Property(property="nama_rw", type="string", nullable=true, maxLength=100, example="RW 001"),
+     *             @OA\Property(property="nama_ketua", type="string", nullable=true, maxLength=150, example="Siti Aminah"),
+     *             @OA\Property(property="nomor_whatsapp", type="string", nullable=true, maxLength=20, example="081234567890")
      *         )
      *     ),
      *     @OA\Response(response=201, description="RW berhasil ditambahkan"),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin)"),
      *     @OA\Response(response=422, description="Validasi gagal")
      * )
      */
@@ -79,8 +85,11 @@ class RwController extends Controller
      *     path="/api/admin/rw/{rw}",
      *     tags={"Admin - Data RW"},
      *     summary="Menampilkan detail RW",
+     *     security={{"sanctum":{}}},
      *     @OA\Parameter(name="rw", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Response(response=200, description="Detail RW berhasil ditampilkan"),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin)"),
      *     @OA\Response(response=404, description="RW tidak ditemukan")
      * )
      */
@@ -100,16 +109,43 @@ class RwController extends Controller
      * @OA\Put(
      *     path="/api/admin/rw/{rw}",
      *     tags={"Admin - Data RW"},
-     *     summary="Mengubah data RW",
+     *     summary="Mengubah data RW (PUT)",
+     *     security={{"sanctum":{}}},
      *     @OA\Parameter(name="rw", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             @OA\Property(property="nomor_rw", type="string", example="002"),
-     *             @OA\Property(property="nama_rw", type="string", example="RW 002")
+     *             @OA\Property(property="nomor_rw", type="string", maxLength=10, example="002"),
+     *             @OA\Property(property="nama_rw", type="string", nullable=true, maxLength=100, example="RW 002"),
+     *             @OA\Property(property="nama_ketua", type="string", nullable=true, maxLength=150, example="Siti Aminah"),
+     *             @OA\Property(property="nomor_whatsapp", type="string", nullable=true, maxLength=20, example="081234567890")
      *         )
      *     ),
      *     @OA\Response(response=200, description="Data RW berhasil diubah"),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin)"),
+     *     @OA\Response(response=404, description="RW tidak ditemukan"),
+     *     @OA\Response(response=422, description="Validasi gagal")
+     * )
+     * @OA\Patch(
+     *     path="/api/admin/rw/{rw}",
+     *     tags={"Admin - Data RW"},
+     *     summary="Mengubah data RW (PATCH)",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="rw", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="nomor_rw", type="string", maxLength=10, example="002"),
+     *             @OA\Property(property="nama_rw", type="string", nullable=true, maxLength=100, example="RW 002"),
+     *             @OA\Property(property="nama_ketua", type="string", nullable=true, maxLength=150, example="Siti Aminah"),
+     *             @OA\Property(property="nomor_whatsapp", type="string", nullable=true, maxLength=20, example="081234567890")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Data RW berhasil diubah"),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin)"),
+     *     @OA\Response(response=404, description="RW tidak ditemukan"),
      *     @OA\Response(response=422, description="Validasi gagal")
      * )
      */
@@ -142,8 +178,12 @@ class RwController extends Controller
      *     path="/api/admin/rw/{rw}",
      *     tags={"Admin - Data RW"},
      *     summary="Menghapus data RW",
+     *     security={{"sanctum":{}}},
      *     @OA\Parameter(name="rw", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Response(response=200, description="RW berhasil dihapus"),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Admin)"),
+     *     @OA\Response(response=404, description="RW tidak ditemukan"),
      *     @OA\Response(response=409, description="RW masih memiliki RT")
      * )
      */

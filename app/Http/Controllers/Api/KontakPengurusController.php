@@ -14,8 +14,36 @@ class KontakPengurusController extends Controller
      *     tags={"Warga - Profil"},
      *     summary="Mengambil kontak Ketua RT dan RW warga yang login",
      *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="Kontak pengurus berhasil ditampilkan"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Kontak pengurus berhasil ditampilkan",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Kontak Ketua RT dan RW berhasil ditampilkan."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="rt",
+     *                     type="object",
+     *                     @OA\Property(property="id_rt", type="integer", example=1),
+     *                     @OA\Property(property="nomor_rt", type="string", example="001"),
+     *                     @OA\Property(property="nama_ketua", type="string", example="Budi Santoso"),
+     *                     @OA\Property(property="nomor_whatsapp", type="string", example="081234567890")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="rw",
+     *                     type="object",
+     *                     @OA\Property(property="id_rw", type="integer", example=1),
+     *                     @OA\Property(property="nomor_rw", type="string", example="001"),
+     *                     @OA\Property(property="nama_ketua", type="string", example="Siti Aminah"),
+     *                     @OA\Property(property="nomor_whatsapp", type="string", example="081234567890")
+     *                 )
+     *             )
+     *         )
+     *     ),
      *     @OA\Response(response=401, description="Belum login"),
+     *     @OA\Response(response=403, description="Akses ditolak (Hanya Warga)"),
      *     @OA\Response(response=404, description="Kontak pengurus belum tersedia")
      * )
      */

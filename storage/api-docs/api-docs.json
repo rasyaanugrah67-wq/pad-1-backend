@@ -2391,10 +2391,77 @@
                 "operationId": "dacc07d8e7783ae11a1f81a6c9321f3f",
                 "responses": {
                     "200": {
-                        "description": "Kontak pengurus berhasil ditampilkan"
+                        "description": "Kontak pengurus berhasil ditampilkan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Kontak Ketua RT dan RW berhasil ditampilkan."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "rt": {
+                                                    "properties": {
+                                                        "id_rt": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "nomor_rt": {
+                                                            "type": "string",
+                                                            "example": "001"
+                                                        },
+                                                        "nama_ketua": {
+                                                            "type": "string",
+                                                            "example": "Budi Santoso"
+                                                        },
+                                                        "nomor_whatsapp": {
+                                                            "type": "string",
+                                                            "example": "081234567890"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "rw": {
+                                                    "properties": {
+                                                        "id_rw": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "nomor_rw": {
+                                                            "type": "string",
+                                                            "example": "001"
+                                                        },
+                                                        "nama_ketua": {
+                                                            "type": "string",
+                                                            "example": "Siti Aminah"
+                                                        },
+                                                        "nomor_whatsapp": {
+                                                            "type": "string",
+                                                            "example": "081234567890"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Belum login"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Warga)"
                     },
                     "404": {
                         "description": "Kontak pengurus belum tersedia"
@@ -4549,8 +4616,19 @@
                 "responses": {
                     "200": {
                         "description": "Daftar RT berhasil ditampilkan"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
@@ -4574,19 +4652,24 @@
                                     },
                                     "nomor_rt": {
                                         "type": "string",
+                                        "maxLength": 10,
                                         "example": "001"
                                     },
                                     "nama_rt": {
                                         "type": "string",
-                                        "example": "RT 001"
+                                        "maxLength": 100,
+                                        "example": "RT 001",
+                                        "nullable": true
                                     },
                                     "nama_ketua": {
                                         "type": "string",
+                                        "maxLength": 150,
                                         "example": "Budi Santoso",
                                         "nullable": true
                                     },
                                     "nomor_whatsapp": {
                                         "type": "string",
+                                        "maxLength": 20,
                                         "example": "081234567890",
                                         "nullable": true
                                     }
@@ -4600,10 +4683,21 @@
                     "201": {
                         "description": "RT berhasil ditambahkan"
                     },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
                     "422": {
                         "description": "Validasi gagal"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/admin/rt/{rt}": {
@@ -4627,16 +4721,27 @@
                     "200": {
                         "description": "Detail RT berhasil ditampilkan"
                     },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
                     "404": {
                         "description": "RT tidak ditemukan"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Admin - Data RT"
                 ],
-                "summary": "Mengubah data RT",
+                "summary": "Mengubah data RT (PUT)",
                 "operationId": "4271c1614764195ebfab07a6ec900f25",
                 "parameters": [
                     {
@@ -4660,11 +4765,26 @@
                                     },
                                     "nomor_rt": {
                                         "type": "string",
+                                        "maxLength": 10,
                                         "example": "002"
                                     },
                                     "nama_rt": {
                                         "type": "string",
-                                        "example": "RT 002"
+                                        "maxLength": 100,
+                                        "example": "RT 002",
+                                        "nullable": true
+                                    },
+                                    "nama_ketua": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Budi Santoso",
+                                        "nullable": true
+                                    },
+                                    "nomor_whatsapp": {
+                                        "type": "string",
+                                        "maxLength": 20,
+                                        "example": "081234567890",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -4676,10 +4796,24 @@
                     "200": {
                         "description": "Data RT berhasil diubah"
                     },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "RT tidak ditemukan"
+                    },
                     "422": {
                         "description": "Validasi gagal"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
@@ -4701,10 +4835,102 @@
                     "200": {
                         "description": "RT berhasil dihapus"
                     },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "RT tidak ditemukan"
+                    },
                     "409": {
                         "description": "RT masih memiliki warga"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Admin - Data RT"
+                ],
+                "summary": "Mengubah data RT (PATCH)",
+                "operationId": "4626371742230387683d7ec6ecbb1375",
+                "parameters": [
+                    {
+                        "name": "rt",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "id_rw": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "nomor_rt": {
+                                        "type": "string",
+                                        "maxLength": 10,
+                                        "example": "002"
+                                    },
+                                    "nama_rt": {
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "example": "RT 002",
+                                        "nullable": true
+                                    },
+                                    "nama_ketua": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Budi Santoso",
+                                        "nullable": true
+                                    },
+                                    "nomor_whatsapp": {
+                                        "type": "string",
+                                        "maxLength": 20,
+                                        "example": "081234567890",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Data RT berhasil diubah"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "RT tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/admin/rw": {
@@ -4717,8 +4943,19 @@
                 "responses": {
                     "200": {
                         "description": "Daftar RW berhasil ditampilkan"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
@@ -4737,19 +4974,24 @@
                                 "properties": {
                                     "nomor_rw": {
                                         "type": "string",
+                                        "maxLength": 10,
                                         "example": "001"
                                     },
                                     "nama_rw": {
                                         "type": "string",
-                                        "example": "RW 001"
+                                        "maxLength": 100,
+                                        "example": "RW 001",
+                                        "nullable": true
                                     },
                                     "nama_ketua": {
                                         "type": "string",
+                                        "maxLength": 150,
                                         "example": "Siti Aminah",
                                         "nullable": true
                                     },
                                     "nomor_whatsapp": {
                                         "type": "string",
+                                        "maxLength": 20,
                                         "example": "081234567890",
                                         "nullable": true
                                     }
@@ -4763,10 +5005,21 @@
                     "201": {
                         "description": "RW berhasil ditambahkan"
                     },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
                     "422": {
                         "description": "Validasi gagal"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/admin/rw/{rw}": {
@@ -4790,16 +5043,27 @@
                     "200": {
                         "description": "Detail RW berhasil ditampilkan"
                     },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
                     "404": {
                         "description": "RW tidak ditemukan"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Admin - Data RW"
                 ],
-                "summary": "Mengubah data RW",
+                "summary": "Mengubah data RW (PUT)",
                 "operationId": "ab195b4ffac0339e1c09b686b3296274",
                 "parameters": [
                     {
@@ -4819,11 +5083,26 @@
                                 "properties": {
                                     "nomor_rw": {
                                         "type": "string",
+                                        "maxLength": 10,
                                         "example": "002"
                                     },
                                     "nama_rw": {
                                         "type": "string",
-                                        "example": "RW 002"
+                                        "maxLength": 100,
+                                        "example": "RW 002",
+                                        "nullable": true
+                                    },
+                                    "nama_ketua": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Siti Aminah",
+                                        "nullable": true
+                                    },
+                                    "nomor_whatsapp": {
+                                        "type": "string",
+                                        "maxLength": 20,
+                                        "example": "081234567890",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -4835,10 +5114,24 @@
                     "200": {
                         "description": "Data RW berhasil diubah"
                     },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "RW tidak ditemukan"
+                    },
                     "422": {
                         "description": "Validasi gagal"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
@@ -4860,10 +5153,98 @@
                     "200": {
                         "description": "RW berhasil dihapus"
                     },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "RW tidak ditemukan"
+                    },
                     "409": {
                         "description": "RW masih memiliki RT"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Admin - Data RW"
+                ],
+                "summary": "Mengubah data RW (PATCH)",
+                "operationId": "7271f614f88331a0b672fcb9fe8a0033",
+                "parameters": [
+                    {
+                        "name": "rw",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nomor_rw": {
+                                        "type": "string",
+                                        "maxLength": 10,
+                                        "example": "002"
+                                    },
+                                    "nama_rw": {
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "example": "RW 002",
+                                        "nullable": true
+                                    },
+                                    "nama_ketua": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Siti Aminah",
+                                        "nullable": true
+                                    },
+                                    "nomor_whatsapp": {
+                                        "type": "string",
+                                        "maxLength": 20,
+                                        "example": "081234567890",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Data RW berhasil diubah"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Akses ditolak (Hanya Admin)"
+                    },
+                    "404": {
+                        "description": "RW tidak ditemukan"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/manajemen/tagihan": {
